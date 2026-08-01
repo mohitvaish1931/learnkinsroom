@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to StackRoom are documented here.
+All notable changes to Learnkins Room are documented here.
 
 ---
 

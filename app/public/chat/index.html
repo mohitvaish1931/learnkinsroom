@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>StackRoom — Chat</title>
+    <title>Learnkins Room — Chat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -1407,7 +1407,7 @@
             <div class="w-6 h-6 rounded-md bg-indigo-500 flex items-center justify-center">
                 <i class="fa-solid fa-code text-white text-xs"></i>
             </div>
-            <span class="font-bold text-sm" style="color:var(--text);">StackRoom</span>
+            <span class="font-bold text-sm" style="color:var(--text);">Learnkins Room</span>
         </div>
         <div class="loader-ring"></div>
         <p class="text-xs mt-1" id="loader-msg" style="color:var(--muted);">Loading room...</p>
@@ -2790,7 +2790,7 @@
         // ─────────────────────────────────────────────
         function initEditor() {
             editorInstance = CodeMirror(document.getElementById('editor-container'), {
-                value: '// Welcome to StackRoom\n',
+                value: '// Welcome to Learnkins Room\n',
                 mode: 'javascript',
                 theme: 'dracula',
                 lineNumbers: true,
@@ -3273,7 +3273,7 @@
                 document.getElementById('sidebar-room-name').textContent = currentRoom.name;
                 document.getElementById('sidebar-code').textContent = currentRoom.inviteCode;
                 document.getElementById('topbar-room').textContent = currentRoom.name;
-                document.title = `${currentRoom.name} — StackRoom`;
+                document.title = `${currentRoom.name} — Learnkins Room`;
 
                 if (myRole === 'admin') {
                     document.getElementById('admin-actions').style.cssText = 'display:flex;';

@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const path = require('path');
 const admin = require('firebase-admin');
 const { GoogleGenAI } = require('@google/genai');
@@ -19,29 +20,141 @@ const mailer = nodemailer.createTransport({
 });
 
 const app = express();
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const genai = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
 
 marked.setOptions({ breaks: true, gfm: true });
+
+const localUsers = new Map();
+const localRooms = new Map();
+const localMessages = new Map();
+let localRoomCounter = 1;
+
+function getLocalUser(user) {
+  const uid = user?.uid || 'local-user';
+  if (!localUsers.has(uid)) {
+    localUsers.set(uid, {
+      uid,
+      displayName: user?.name || user?.displayName || 'Learnkins Room Guest',
+      photoURL: user?.picture || user?.photoURL || '',
+      email: user?.email || 'guest@learnkinsroom.local',
+      rooms: []
+    });
+  }
+  return localUsers.get(uid);
+}
+
+function serializeRoom(room) {
+  return { id: room.id, ...room };
+}
+
+function createLocalRoom({ name, description, githubRepo, createdBy }) {
+  const roomId = `local-room-${localRoomCounter++}`;
+  const room = {
+    id: roomId,
+    name: name || 'Learnkins Room',
+    description: description || '',
+    githubRepo: githubRepo || '',
+    inviteCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+    createdBy,
+    createdAt: new Date().toISOString(),
+    members: {
+      [createdBy]: {
+        role: 'admin',
+        displayName: localUsers.get(createdBy)?.displayName || 'Learnkins Room Guest',
+        photoURL: localUsers.get(createdBy)?.photoURL || '',
+        joinedAt: new Date().toISOString()
+      }
+    }
+  };
+  localRooms.set(roomId, room);
+  localMessages.set(roomId, []);
+  return room;
+}
 
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, './public')));
 
-const serviceAccount = require('./service-account.json');
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET
-  });
+let db = null;
+let bucket = null;
+let firebaseReady = false;
+
+const serviceAccountPath = path.join(__dirname, './service-account.json');
+let serviceAccount = null;
+
+if (fs.existsSync(serviceAccountPath)) {
+  try {
+    serviceAccount = require(serviceAccountPath);
+  } catch (err) {
+    console.warn('Could not load service-account.json:', err.message);
+  }
 }
 
-const db = admin.firestore();
-const bucket = admin.storage().bucket();
+function normalizePrivateKey(value) {
+  if (!value) return '';
+
+  let normalized = value.trim();
+
+  if ((normalized.startsWith('"') && normalized.endsWith('"')) || (normalized.startsWith("'") && normalized.endsWith("'"))) {
+    normalized = normalized.slice(1, -1).trim();
+  }
+
+  normalized = normalized
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n');
+
+  return normalized;
+}
+
+if (serviceAccount && (process.env.FIREBASE_CLIENT_EMAIL || serviceAccount.client_email) && !admin.apps.length) {
+  try {
+    const envPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+    const serviceAccountPrivateKey = serviceAccount.private_key || '';
+    const privateKeySource = envPrivateKey && /BEGIN PRIVATE KEY/.test(envPrivateKey)
+      ? envPrivateKey
+      : serviceAccountPrivateKey;
+    const privateKey = normalizePrivateKey(privateKeySource);
+
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        ...serviceAccount,
+        client_email: process.env.FIREBASE_CLIENT_EMAIL || serviceAccount.client_email,
+        private_key: privateKey
+      }),
+      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_PROJECT_ID + '.appspot.com'
+    });
+    db = admin.firestore();
+    bucket = admin.storage().bucket();
+    firebaseReady = true;
+  } catch (err) {
+    console.warn('Firebase Admin initialization failed. Continuing in local compatibility mode:', err.message);
+  }
+}
+
+if (!firebaseReady) {
+  console.warn('Firebase Admin is not configured. API routes that need Firestore will return a 503 response until credentials are added.');
+}
+
+app.use('/api', (req, res, next) => {
+  if (req.path === '/config' || req.path === '/health') return next();
+  if (!firebaseReady && !['/ai/chat', '/ai/private/stream', '/ai/private', '/ai/snippet-verdict'].includes(req.path)) {
+    if (req.headers.authorization?.startsWith('Bearer local-')) return next();
+    return res.status(503).json({
+      error: 'Local compatibility mode: Firebase is not configured. Add credentials to enable full backend functionality.'
+    });
+  }
+  next();
+});
 
 const verifyToken = async (req, res, next) => {
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (!token) return res.status(401).json({ error: 'Unauthorized — no token' });
+  if (token.startsWith('local-')) {
+    req.user = getLocalUser({ uid: 'local-user', name: 'Learnkins Room Guest', email: 'guest@learnkinsroom.local' });
+    return next();
+  }
   try {
     req.user = await admin.auth().verifyIdToken(token);
     next();
@@ -53,7 +166,11 @@ const verifyToken = async (req, res, next) => {
 const optionalAuth = async (req, res, next) => {
   const token = req.headers.authorization?.split('Bearer ')[1];
   if (token) {
-    try { req.user = await admin.auth().verifyIdToken(token); } catch { }
+    if (token.startsWith('local-')) {
+      req.user = getLocalUser({ uid: 'local-user', name: 'Learnkins Room Guest', email: 'guest@learnkinsroom.local' });
+    } else {
+      try { req.user = await admin.auth().verifyIdToken(token); } catch { }
+    }
   }
   next();
 };
@@ -87,7 +204,7 @@ async function sendPREmail({ adminEmail, adminName, submitterName, fileName, typ
          style="display:inline-block;margin-top:24px;padding:10px 20px;
                 background:#7c3aed;color:#fff;text-decoration:none;
                 border-radius:8px;font-size:14px;">
-        Review in StackRoom
+        Review in Learnkins Room
       </a>
       <p style="margin-top:24px;font-size:12px;color:#475569;">
         You are receiving this because you are an admin of "${roomName}".
@@ -97,7 +214,7 @@ async function sendPREmail({ adminEmail, adminName, submitterName, fileName, typ
   await mailer.sendMail({
     from: process.env.MAIL_FROM,
     to: adminEmail,
-    subject: `[StackRoom] New PR from ${submitterName} — ${fileName}`,
+    subject: `[Learnkins Room] New PR from ${submitterName} — ${fileName}`,
     html
   });
 }
@@ -127,20 +244,29 @@ async function notifyAdmins({ roomId, submitterName, fileName, type, prId }) {
 }
 
 // ── CONFIG ────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', firebaseReady, geminiReady: Boolean(genai), port: process.env.PORT || 3000 });
+});
+
 app.get('/api/config', (req, res) => {
   res.json({
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.FIREBASE_APP_ID
+    apiKey: process.env.FIREBASE_API_KEY || 'demo-api-key',
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN || 'learnkins-room.firebaseapp.com',
+    projectId: process.env.FIREBASE_PROJECT_ID || 'learnkins-room-local',
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'learnkins-room-local.appspot.com',
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || '000000000000',
+    appId: process.env.FIREBASE_APP_ID || '1:000000000000:web:demo',
+    localMode: !firebaseReady
   });
 });
 
 // ── AUTH ──────────────────────────────────────────
 app.get('/api/auth/me', verifyToken, async (req, res) => {
   try {
+    if (!firebaseReady) {
+      const profile = getLocalUser(req.user);
+      return res.json({ uid: profile.uid, ...profile });
+    }
     const snap = await db.collection('users').doc(req.user.uid).get();
     if (!snap.exists) return res.status(404).json({ error: 'User not found' });
     res.json({ uid: req.user.uid, ...snap.data() });
@@ -152,6 +278,13 @@ app.get('/api/auth/me', verifyToken, async (req, res) => {
 app.post('/api/auth/profile', verifyToken, async (req, res) => {
   try {
     const { displayName, photoURL, email } = req.body;
+    if (!firebaseReady) {
+      const profile = getLocalUser(req.user);
+      profile.displayName = displayName || req.user.name || profile.displayName;
+      profile.photoURL = photoURL || req.user.picture || profile.photoURL;
+      profile.email = email || req.user.email || profile.email;
+      return res.json({ success: true });
+    }
     await db.collection('users').doc(req.user.uid).set({
       uid: req.user.uid,
       displayName: displayName || req.user.name || '',
@@ -170,6 +303,13 @@ app.post('/api/rooms/create', verifyToken, async (req, res) => {
   try {
     const { name, description, githubRepo } = req.body;
     if (!name) return res.status(400).json({ error: 'Room name is required' });
+
+    if (!firebaseReady) {
+      const room = createLocalRoom({ name, description, githubRepo, createdBy: req.user.uid });
+      const profile = getLocalUser(req.user);
+      profile.rooms = profile.rooms.includes(room.id) ? profile.rooms : [...profile.rooms, room.id];
+      return res.json({ roomId: room.id, inviteCode: room.inviteCode });
+    }
 
     const inviteCode = genInviteCode();
     const roomRef = db.collection('rooms').doc();
@@ -208,6 +348,21 @@ app.post('/api/rooms/join', verifyToken, async (req, res) => {
     const { inviteCode } = req.body;
     if (!inviteCode) return res.status(400).json({ error: 'Invite code required' });
 
+    if (!firebaseReady) {
+      const room = Array.from(localRooms.values()).find(r => r.inviteCode === inviteCode.toUpperCase());
+      if (!room) return res.status(404).json({ error: 'Room not found — check invite code' });
+      if (room.members?.[req.user.uid]) return res.json({ roomId: room.id, alreadyMember: true });
+      room.members[req.user.uid] = {
+        role: 'member',
+        displayName: req.user.name || '',
+        photoURL: req.user.picture || '',
+        joinedAt: new Date().toISOString()
+      };
+      const profile = getLocalUser(req.user);
+      profile.rooms = profile.rooms.includes(room.id) ? profile.rooms : [...profile.rooms, room.id];
+      return res.json({ roomId: room.id, alreadyMember: false });
+    }
+
     const snap = await db.collection('rooms')
       .where('inviteCode', '==', inviteCode.toUpperCase())
       .limit(1).get();
@@ -241,6 +396,13 @@ app.post('/api/rooms/join', verifyToken, async (req, res) => {
 
 app.get('/api/rooms', verifyToken, async (req, res) => {
   try {
+    if (!firebaseReady) {
+      const profile = getLocalUser(req.user);
+      const roomIds = profile.rooms || [];
+      const rooms = roomIds.map(id => localRooms.get(id)).filter(Boolean).map(serializeRoom);
+      return res.json(rooms);
+    }
+
     const userRef = db.collection('users').doc(req.user.uid);
     const userSnap = await userRef.get();
 
@@ -270,6 +432,12 @@ app.get('/api/rooms', verifyToken, async (req, res) => {
 
 app.get('/api/rooms/:roomId', verifyToken, async (req, res) => {
   try {
+    if (!firebaseReady) {
+      const room = localRooms.get(req.params.roomId);
+      if (!room) return res.status(404).json({ error: 'Room not found' });
+      if (!room.members?.[req.user.uid]) return res.status(403).json({ error: 'Not a member' });
+      return res.json(serializeRoom(room));
+    }
     const snap = await db.collection('rooms').doc(req.params.roomId).get();
     if (!snap.exists) return res.status(404).json({ error: 'Room not found' });
     const room = snap.data();
@@ -283,6 +451,16 @@ app.get('/api/rooms/:roomId', verifyToken, async (req, res) => {
 app.patch('/api/rooms/:roomId', verifyToken, async (req, res) => {
   try {
     const { name, description, githubRepo } = req.body;
+    if (!firebaseReady) {
+      const room = localRooms.get(req.params.roomId);
+      if (!room) return res.status(404).json({ error: 'Room not found' });
+      if (room.members?.[req.user.uid]?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      if (name !== undefined) room.name = name;
+      if (description !== undefined) room.description = description;
+      if (githubRepo !== undefined) room.githubRepo = githubRepo;
+      room.updatedAt = new Date().toISOString();
+      return res.json({ success: true });
+    }
     const snap = await db.collection('rooms').doc(req.params.roomId).get();
     if (!snap.exists) return res.status(404).json({ error: 'Room not found' });
     if (snap.data().members?.[req.user.uid]?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
@@ -300,6 +478,14 @@ app.patch('/api/rooms/:roomId', verifyToken, async (req, res) => {
 
 app.delete('/api/rooms/:roomId', verifyToken, async (req, res) => {
   try {
+    if (!firebaseReady) {
+      const room = localRooms.get(req.params.roomId);
+      if (!room) return res.status(404).json({ error: 'Room not found' });
+      if (room.members?.[req.user.uid]?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+      localRooms.delete(req.params.roomId);
+      localMessages.delete(req.params.roomId);
+      return res.json({ success: true });
+    }
     const snap = await db.collection('rooms').doc(req.params.roomId).get();
     if (!snap.exists) return res.status(404).json({ error: 'Room not found' });
     if (snap.data().members?.[req.user.uid]?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
@@ -349,6 +535,14 @@ app.get('/api/rooms/:roomId/messages', verifyToken, async (req, res) => {
   try {
     const lim = parseInt(req.query.limit) || 50;
     const before = req.query.before;
+
+    if (!firebaseReady) {
+      const room = localRooms.get(req.params.roomId);
+      if (!room) return res.status(404).json({ error: 'Room not found' });
+      if (!room.members?.[req.user.uid]) return res.status(403).json({ error: 'Not a member' });
+      const msgs = (localMessages.get(req.params.roomId) || []).slice(-lim).reverse();
+      return res.json(msgs);
+    }
 
     const roomSnap = await db.collection('rooms').doc(req.params.roomId).get();
     if (!roomSnap.exists) return res.status(404).json({ error: 'Room not found' });
@@ -847,5 +1041,23 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, './public/index.html'));
 });
 
-const PORT = process.env.PORT || 6969;
-app.listen(PORT, () => console.log(`\n  StackRoom → http://localhost:${PORT}\n`));
+const PORT = Number(process.env.PORT) || 6969;
+const startServer = (port) => {
+  const normalizedPort = Number(port);
+  const server = app.listen(normalizedPort, () => console.log(`\n  Learnkins Room → http://localhost:${normalizedPort}\n`));
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`Port ${normalizedPort} is busy. Trying ${normalizedPort + 1}...`);
+      startServer(normalizedPort + 1);
+    } else {
+      console.error(err);
+      process.exit(1);
+    }
+  });
+};
+
+if (require.main === module) {
+  startServer(PORT);
+}
+
+module.exports = app;

@@ -1,6 +1,6 @@
-# StackRoom
+# Learnkins Room
 
-StackRoom is a real-time collaborative coding platform built for developer teams. It combines group chat, a shared code editor, a pull request workflow, and an AI coding assistant into a single browser-based workspace. Rooms are the core unit — each room has its own chat history, file tree, members, and settings.
+Learnkins Room is a real-time collaborative coding platform built for developer teams. It combines group chat, a shared code editor, a pull request workflow, and an AI coding assistant into a single browser-based workspace. Rooms are the core unit — each room has its own chat history, file tree, members, and settings.
 
 > See [INSTALLATION.md](./INSTALLATION.md) for setup instructions.
 
@@ -237,7 +237,7 @@ rooms/
 
 ## AI Integration
 
-StackRoom uses Google Gemini 2.5 Flash via the `@google/genai` Node.js SDK.
+Learnkins Room uses Google Gemini 2.5 Flash via the `@google/genai` Node.js SDK.
 
 **Group chat AI (`@ai` mention)**
 When a message contains `@ai`, the client calls `POST /api/ai/chat` with the prompt. The server calls `generateContent`, parses the response with `marked.js`, and returns `{reply, replyHtml}`. The client then writes an AI message to Firestore with both fields, so it appears in the chat for all members in real time.
@@ -273,7 +273,7 @@ Admins cannot remove themselves if they are the last admin. Members can remove t
 
 ## Pull Request Workflow
 
-This is how file changes are managed in StackRoom:
+This is how file changes are managed in Learnkins Room:
 
 1. A member opens a file or creates a new one in the editor
 2. They make changes and press `Ctrl+S` or click the PR button
@@ -339,7 +339,7 @@ MAIL_PORT=587
 MAIL_SECURE=false
 MAIL_USER=noreply@yourdomain.com
 MAIL_PASS=your-email-password
-MAIL_FROM=StackRoom <noreply@yourdomain.com>
+MAIL_FROM=Learnkins Room <noreply@yourdomain.com>
 ```
 
 `service-account.json` is required separately — place it at the root alongside `index.js`. Download it from Firebase Console under Project Settings > Service Accounts.

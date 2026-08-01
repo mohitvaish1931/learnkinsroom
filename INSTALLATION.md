@@ -1,6 +1,6 @@
 # Installation Guide — Linux Server
 
-This guide covers everything needed to run StackRoom on a Linux server from scratch.
+This guide covers everything needed to run Learnkins Room on a Linux server from scratch.
 Tested on Ubuntu 22.04 LTS.
 
 ---
@@ -90,18 +90,18 @@ npm install -g yarn
 
 ```bash
 cd /var/www
-sudo mkdir stackroom
-sudo chown $USER:$USER stackroom
-git clone https://github.com/your-username/stackroom.git stackroom
-cd stackroom
+sudo mkdir learnkins-room
+sudo chown $USER:$USER learnkins-room
+git clone https://github.com/your-username/learnkins-room.git learnkins-room
+cd learnkins-room
 ```
 
-If you are deploying without Git, upload your files via SFTP and place them in `/var/www/stackroom`.
+If you are deploying without Git, upload your files via SFTP and place them in `/var/www/learnkins-room`.
 
 The directory should look like this after cloning:
 
 ```
-/var/www/stackroom/
+/var/www/learnkins-room/
 ├── index.js
 ├── package.json
 ├── yarn.lock
@@ -119,7 +119,7 @@ The directory should look like this after cloning:
 
 1. Go to [https://console.firebase.google.com](https://console.firebase.google.com)
 2. Click "Add project"
-3. Enter a name (e.g. `stackroom-prod`)
+3. Enter a name (e.g. `learnkins-room-prod`)
 4. Disable Google Analytics if you do not need it
 5. Click "Create project"
 
@@ -172,7 +172,7 @@ const firebaseConfig = {
 ### 4.6 Add Authorized Domains
 
 1. Go to **Authentication > Settings > Authorized domains**
-2. Add your domain (e.g. `stackroom.dev`)
+2. Add your domain (e.g. `learnkinsroom.dev`)
 3. Also add your server IP if testing without a domain
 
 ---
@@ -280,17 +280,17 @@ The service account gives your Node.js server Admin SDK access to Firebase.
 2. Click "Generate new private key"
 3. Confirm and download the JSON file
 4. Rename it to `service-account.json`
-5. Upload it to your server at `/var/www/stackroom/service-account.json`
+5. Upload it to your server at `/var/www/learnkins-room/service-account.json`
 
 ```bash
 # If uploading via scp from your local machine
-scp service-account.json user@your-server-ip:/var/www/stackroom/service-account.json
+scp service-account.json user@your-server-ip:/var/www/learnkins-room/service-account.json
 ```
 
 Set strict permissions on it — this file is sensitive.
 
 ```bash
-chmod 600 /var/www/stackroom/service-account.json
+chmod 600 /var/www/learnkins-room/service-account.json
 ```
 
 Never commit this file to Git. Verify it is in `.gitignore`:
@@ -319,7 +319,7 @@ The free tier is generous enough for development and small teams. For production
 Create the `.env` file at the project root.
 
 ```bash
-cd /var/www/stackroom
+cd /var/www/learnkins-room
 nano .env
 ```
 
@@ -354,7 +354,7 @@ chmod 600 .env
 ## Step 10 — Install Dependencies
 
 ```bash
-cd /var/www/stackroom
+cd /var/www/learnkins-room
 npm install
 # or if using yarn
 yarn install
@@ -375,14 +375,14 @@ This installs:
 Test that it starts correctly.
 
 ```bash
-cd /var/www/stackroom
+cd /var/www/learnkins-room
 node index.js
 ```
 
 You should see:
 
 ```
-  StackRoom → http://localhost:3000
+  Learnkins Room → http://localhost:3000
 ```
 
 Test it.
@@ -404,11 +404,11 @@ PM2 is a process manager that keeps Node.js apps running after you log out and r
 npm install -g pm2
 ```
 
-Start StackRoom with PM2.
+Start Learnkins Room with PM2.
 
 ```bash
-cd /var/www/stackroom
-pm2 start index.js --name stackroom
+cd /var/www/learnkins-room
+pm2 start index.js --name learnkins-room
 ```
 
 Save the process list and set PM2 to start on reboot.
@@ -424,11 +424,11 @@ Useful PM2 commands.
 
 ```bash
 pm2 status                  # see running apps
-pm2 logs stackroom          # live logs
-pm2 logs stackroom --lines 50  # last 50 lines
-pm2 restart stackroom       # restart after code changes
-pm2 stop stackroom          # stop
-pm2 delete stackroom        # remove from PM2
+pm2 logs learnkins-room          # live logs
+pm2 logs learnkins-room --lines 50  # last 50 lines
+pm2 restart learnkins-room       # restart after code changes
+pm2 stop learnkins-room          # stop
+pm2 delete learnkins-room        # remove from PM2
 ```
 
 ---
@@ -443,10 +443,10 @@ Install Nginx.
 sudo apt install -y nginx
 ```
 
-Create a config file for StackRoom.
+Create a config file for Learnkins Room.
 
 ```bash
-sudo nano /etc/nginx/sites-available/stackroom
+sudo nano /etc/nginx/sites-available/learnkins-room
 ```
 
 Paste this config (replace `yourdomain.com` with your actual domain or server IP):
@@ -486,7 +486,7 @@ server {
 Enable the site.
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/stackroom /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/learnkins-room /etc/nginx/sites-enabled/
 sudo nginx -t        # test config — must say "syntax is ok"
 sudo systemctl reload nginx
 ```
@@ -594,7 +594,7 @@ Go to **Firestore > Indexes > Composite** and create these:
 | `prs` (subcollection) | `createdAt` | Descending |
 | `files` (subcollection) | `createdAt` | Ascending |
 
-You can also let the server log the index creation URL automatically — when a query fails due to a missing index, Firebase prints a direct link in the error message that takes you straight to the index creation screen. Just run the app, trigger the query, and check `pm2 logs stackroom`.
+You can also let the server log the index creation URL automatically — when a query fails due to a missing index, Firebase prints a direct link in the error message that takes you straight to the index creation screen. Just run the app, trigger the query, and check `pm2 logs learnkins-room`.
 
 ---
 
@@ -610,7 +610,7 @@ pm2 status
 curl https://yourdomain.com/api/debug
 
 # 3. Check logs for errors
-pm2 logs stackroom --lines 30
+pm2 logs learnkins-room --lines 30
 
 # 4. Nginx is active
 sudo systemctl status nginx
@@ -658,7 +658,7 @@ proxy_set_header Connection '';
 The `origin` in `index.js` cors config does not match your domain. The current config uses `*` which allows all origins — if you have restricted it, add your domain.
 
 **`502 Bad Gateway`**
-Node.js is not running or crashed. Check with `pm2 status` and `pm2 logs stackroom`.
+Node.js is not running or crashed. Check with `pm2 status` and `pm2 logs learnkins-room`.
 
 **Port 3000 already in use**
 ```bash

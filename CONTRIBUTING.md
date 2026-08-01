@@ -1,4 +1,4 @@
-# Contributing to StackRoom
+# Contributing to Learnkins Room
 
 Contributions are welcome. Before working on anything significant, open an issue first so we can discuss it and avoid duplicate work.
 
@@ -22,8 +22,8 @@ Contributions are welcome. Before working on anything significant, open an issue
 Read [INSTALLATION.md](./INSTALLATION.md) for the full setup guide. Short version:
 
 ```bash
-git clone https://github.com/your-username/stackroom.git
-cd stackroom
+git clone https://github.com/your-username/learnkins-room.git
+cd learnkins-room
 npm install
 cp .env.example .env
 # fill in Firebase and Gemini credentials

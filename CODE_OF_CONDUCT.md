@@ -4,7 +4,7 @@
 
 ## The Short Version
 
-Be decent to each other. StackRoom is a project built by developers for developers. Everyone is welcome regardless of experience level, background, or where they are from. If you are here to build something useful and work with others in good faith, you belong here.
+Be decent to each other. Learnkins Room is a project built by developers for developers. Everyone is welcome regardless of experience level, background, or where they are from. If you are here to build something useful and work with others in good faith, you belong here.
 
 ---
 
@@ -32,7 +32,7 @@ Be decent to each other. StackRoom is a project built by developers for develope
 
 ## Scope
 
-This applies everywhere the project exists — GitHub issues, pull requests, discussions, and any other space where StackRoom is being discussed or worked on.
+This applies everywhere the project exists — GitHub issues, pull requests, discussions, and any other space where Learnkins Room is being discussed or worked on.
 
 ---
 
