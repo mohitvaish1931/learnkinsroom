@@ -108,23 +108,50 @@ function normalizePrivateKey(value) {
   return normalized;
 }
 
-if (serviceAccount && (process.env.FIREBASE_CLIENT_EMAIL || serviceAccount.client_email) && !admin.apps.length) {
-  try {
-    const envPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
-    const serviceAccountPrivateKey = serviceAccount.private_key || '';
-    const privateKeySource = envPrivateKey && /BEGIN PRIVATE KEY/.test(envPrivateKey)
-      ? envPrivateKey
-      : serviceAccountPrivateKey;
-    const privateKey = normalizePrivateKey(privateKeySource);
+function getFirebaseCertConfig() {
+  const envPrivateKey = process.env.FIREBASE_PRIVATE_KEY;
+  const envClientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const envProjectId = process.env.FIREBASE_PROJECT_ID;
+  const hasEnvCredentials = envPrivateKey && envClientEmail && envProjectId;
 
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        ...serviceAccount,
-        client_email: process.env.FIREBASE_CLIENT_EMAIL || serviceAccount.client_email,
-        private_key: privateKey
-      }),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_PROJECT_ID + '.appspot.com'
-    });
+  if (serviceAccount && serviceAccount.private_key) {
+    return {
+      ...serviceAccount,
+      client_email: envClientEmail || serviceAccount.client_email,
+      project_id: envProjectId || serviceAccount.project_id,
+      private_key: normalizePrivateKey(envPrivateKey && /BEGIN PRIVATE KEY/.test(envPrivateKey)
+        ? envPrivateKey
+        : serviceAccount.private_key)
+    };
+  }
+
+  if (hasEnvCredentials) {
+    return {
+      type: 'service_account',
+      project_id: envProjectId,
+      client_email: envClientEmail,
+      private_key: normalizePrivateKey(envPrivateKey)
+    };
+  }
+
+  return null;
+}
+
+if (!admin.apps.length) {
+  try {
+    const firebaseCert = getFirebaseCertConfig();
+    if (firebaseCert) {
+      admin.initializeApp({
+        credential: admin.credential.cert(firebaseCert),
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_PROJECT_ID + '.appspot.com'
+      });
+      db = admin.firestore();
+      bucket = admin.storage().bucket();
+      firebaseReady = true;
+    }
+  } catch (err) {
+    console.warn('Firebase Admin initialization failed. Continuing in local compatibility mode:', err.message);
+  }
     db = admin.firestore();
     bucket = admin.storage().bucket();
     firebaseReady = true;
