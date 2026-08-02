@@ -156,12 +156,6 @@ if (!admin.apps.length) {
   } catch (err) {
     console.warn('Firebase Admin initialization failed. Continuing in local compatibility mode:', err.message);
   }
-    db = admin.firestore();
-    bucket = admin.storage().bucket();
-    firebaseReady = true;
-  } catch (err) {
-    console.warn('Firebase Admin initialization failed. Continuing in local compatibility mode:', err.message);
-  }
 }
 
 if (!firebaseReady) {
