@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// Uploads go through short-lived signed URLs issued by the server, and each
+// object gets a Firebase download token, so clients never write directly.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /rooms/{roomId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

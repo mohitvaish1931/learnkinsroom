@@ -13,7 +13,7 @@ Tested on Ubuntu 22.04 LTS.
 - [Step 3 — Clone the Project](#step-3--clone-the-project)
 - [Step 4 — Firebase Project Setup](#step-4--firebase-project-setup)
 - [Step 5 — Firestore Rules](#step-5--firestore-rules)
-- [Step 6 — Firebase Storage Rules](#step-6--firebase-storage-rules)
+- [Step 6 — Firebase Storage Rules and CORS](#step-6--firebase-storage-rules-and-cors)
 - [Step 7 — Service Account](#step-7--service-account)
 - [Step 8 — Gemini API Key](#step-8--gemini-api-key)
 - [Step 9 — Environment Variables](#step-9--environment-variables)
@@ -179,96 +179,36 @@ const firebaseConfig = {
 
 ## Step 5 — Firestore Rules
 
-In the Firebase Console, go to **Firestore > Rules** and replace the default rules with these:
+The rules live in [`firestore.rules`](./firestore.rules) at the repo root. They let room members read room data,
+post chat messages as themselves, and use the realtime features (presence, live editing, voice signalling), while
+files, PRs, rooms and GitHub tokens can only be written by the server (Admin SDK).
 
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
+Deploy them with the Firebase CLI:
 
-    // Users — only the owner can write their own profile
-    match /users/{uid} {
-      allow read:  if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
-    }
-
-    // Rooms — members can read, server handles writes via Admin SDK
-    match /rooms/{roomId} {
-      allow read: if request.auth != null &&
-        request.auth.uid in resource.data.members;
-
-      // Messages subcollection — members can read and write
-      match /messages/{msgId} {
-        allow read: if request.auth != null &&
-          request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
-        allow create: if request.auth != null &&
-          request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members &&
-          request.resource.data.uid == request.auth.uid;
-        allow update: if request.auth != null &&
-          request.auth.uid == resource.data.uid;
-        allow delete: if false; // handled server-side (soft delete)
-      }
-
-      // Typing subcollection — members can read and write their own doc
-      match /typing/{uid} {
-        allow read: if request.auth != null &&
-          request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
-        allow write: if request.auth != null && request.auth.uid == uid;
-      }
-
-      // Files subcollection — members can read, server handles writes
-      match /files/{fileId} {
-        allow read: if request.auth != null &&
-          request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
-        allow write: if false; // server-side only via Admin SDK
-      }
-
-      // PRs subcollection — members can read, server handles writes
-      match /prs/{prId} {
-        allow read: if request.auth != null &&
-          request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
-        allow write: if false; // server-side only via Admin SDK
-      }
-
-      // Editor state
-      match /editor/{doc} {
-        allow read: if request.auth != null &&
-          request.auth.uid in get(/databases/$(database)/documents/rooms/$(roomId)).data.members;
-        allow write: if false; // server-side only
-      }
-    }
-  }
-}
+```bash
+npm install -g firebase-tools
+firebase login
+firebase use <your-project-id>
+firebase deploy --only firestore:rules,storage
 ```
 
-Click **Publish**.
+…or paste the contents of `firestore.rules` into **Firestore > Rules** in the Firebase Console and click **Publish**.
 
-These rules allow:
-- Only room members to read room data and messages
-- Members to write their own messages and typing status
-- Everything else (rooms, files, PRs, editor) to be written only via the Admin SDK on your server (bypasses rules entirely)
+> Upgrading from an older version? Re-deploy the rules — live editing, presence and voice use new
+> collections (`collab`, `presence`, `voice`, `voiceSignals`) that the old rules block.
 
 ---
 
-## Step 6 — Firebase Storage Rules
+## Step 6 — Firebase Storage Rules and CORS
 
-In the Firebase Console, go to **Storage > Rules** and replace with:
+Deploy [`storage.rules`](./storage.rules) (the command above includes it) or paste it into **Storage > Rules**.
 
+Browsers upload attachments straight to the bucket with signed URLs, so the bucket needs CORS. Edit the origins in
+[`cors.json`](./cors.json) to your domain(s), then:
+
+```bash
+gsutil cors set cors.json gs://<your-bucket>   # e.g. gs://my-project.appspot.com
 ```
-rules_version = '2';
-service firebase.storage {
-  match /b/{bucket}/o {
-
-    // Room file uploads — authenticated users only
-    match /rooms/{roomId}/{allPaths=**} {
-      allow read:  if request.auth != null;
-      allow write: if false; // server generates signed URLs only
-    }
-  }
-}
-```
-
-Click **Publish**.
 
 ---
 
@@ -579,6 +519,25 @@ Reload Nginx.
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
 ```
+
+---
+
+## Optional — GitHub Sync and Voice
+
+**GitHub sync.** In a room, an admin opens **Room Settings** (gear icon) and fills in:
+
+- Repository — `https://github.com/owner/repo`
+- Branch — created from the default branch if it doesn't exist
+- Folder in repo — optional sub-folder for the room's files
+- Access token — a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new)
+  scoped to that repository with **Contents: Read and write**
+
+Click **Test connection**, tick **Auto-push**, and save. Tokens are stored in the server-only `roomSecrets`
+collection and are never sent back to browsers. Alternatively set `GITHUB_TOKEN` in `.env` as a server-wide default.
+
+**Voice.** Works out of the box with public STUN servers. Users on restrictive networks need a TURN server —
+set `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` in `.env` (any coturn instance or hosted TURN provider works).
+Browsers only allow microphone access on `https://` origins (or `localhost`).
 
 ---
 

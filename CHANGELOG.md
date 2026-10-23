@@ -4,6 +4,37 @@ All notable changes to Learnkins Room are documented here.
 
 ---
 
+## [1.1.0] — 2026-10-23
+
+### Added
+- **Live collaborative editing** — files are Yjs CRDT documents synced over Firestore: simultaneous typing, coloured remote cursors with names, per-user undo, "live · N editing" indicator, and a reset-to-saved action.
+- **Voice rooms** — WebRTC audio mesh with Firestore signalling; join/leave, mute (`Ctrl+Shift+M`), deafen, speaking indicators, optional TURN (`TURN_URL`…).
+- **Automatic GitHub push** — per-room repo/branch/folder/token settings; merged PRs, admin saves, renames and deletes become commits (single commit per change via the Git Data API, retries if the branch moved). "Test connection" and "Push all files now" actions. Commit links posted to chat.
+- **PR diff view** with line numbers, and **AI review** of the diff.
+- **Run code** in the browser — JavaScript (Web Worker with time limit), Python (Pyodide), HTML preview.
+- **Presence** — online dots and "editing <file>" per member; realtime member/role updates; desktop notification on @mention.
+- **Room settings** modal (name, description, GitHub) and room deletion.
+- System messages for joins/leaves and GitHub pushes.
+- `firestore.rules`, `storage.rules`, `cors.json`, `firebase.json`, and a `node:test` suite (`npm test`).
+
+### Fixed
+- `@ai` replies were written by the browser as `uid: "ai"`, which the documented Firestore rules reject — the server now posts them.
+- Admin "Save" showed "Saved directly" but only created a pending PR; admin saves now merge (and push) immediately.
+- Older messages loaded in reverse order when scrolling up, and messages vanished from view as new ones arrived (query window "removed" events were treated as deletions).
+- Stored XSS: AI/`textHtml` messages, attachment URLs and display names could inject script; all rendered HTML is now sanitized (DOMPurify) and URLs restricted to http(s).
+- SSRF: `/api/ai/chat` fetched any attachment URL; it now only reads this project's storage bucket.
+- Any signed-in user could delete any object in the storage bucket, upload into any room, or write typing/editor state for rooms they weren't in — all routes now check membership and role.
+- Viewers could submit PRs; viewer role is now enforced server-side and the editor is read-only for them.
+- AI routes crashed when `GEMINI_API_KEY` was missing; routes without Firebase crashed instead of returning 503.
+- PRs could be approved twice; approval is now transactional. Editing a deleted file or creating a duplicate file name is rejected.
+- Removing a member failed if they had no user document; deleting a room left its subcollections behind.
+- Uploaded files are now readable via Firebase download tokens, so attachments work with locked-down storage rules.
+- PR emails escaped user content, are skipped when mail isn't configured, and use the request origin when `APP_URL` is unset.
+- Typing indicator: throttled pings and stale entries from closed tabs are ignored.
+- Duplicate `#pr-btn` id, missing sidebar icon, wrong module import in `assets/js/helpers.js`, corrupted `.gitignore` lines, and the unauthenticated `/api/debug` endpoint (removed).
+
+---
+
 ## [1.0.0] — 2026-03-06
 
 Initial release.
@@ -113,19 +144,6 @@ Initial release.
 - Firestore used for all real-time features — no WebSocket server needed
 - Admin SDK bypasses Firestore security rules for all server writes
 - SSE streaming requires Nginx `proxy_buffering off` to work correctly
-
----
-
-## Upcoming — [1.1.0]
-
-- Voice rooms via Agora SDK
-- Video calls
-- Screen sharing
-- Live collaborative code editing
-- Viewer role fully enforced on UI
-- AI code review on PR submission
-- Message reactions
-- Message search
 
 ---
 

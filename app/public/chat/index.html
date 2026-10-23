@@ -681,8 +681,18 @@
         }
 
         /* Code toolbar */
+        #code-toolbar > .icon-btn {
+            flex-shrink: 0;
+        }
+
+        /* Keep toolbar overflow inside the toolbar; otherwise the editor
+           column itself scrolls sideways when the panel is narrow. */
         #code-toolbar {
             height: 40px;
+            min-width: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none;
             background: var(--bg2);
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -1396,6 +1406,263 @@
                 opacity: 0
             }
         }
+
+        /* ── Live collaboration ── */
+        .remote-caret {
+            position: relative;
+            border-left: 2px solid;
+            margin-left: -1px;
+            margin-right: -1px;
+            box-sizing: border-box;
+        }
+
+        .remote-caret > div {
+            position: absolute;
+            top: -1.15em;
+            left: -2px;
+            font-size: 10px;
+            line-height: 1.3;
+            padding: 0 4px;
+            border-radius: 3px 3px 3px 0;
+            color: #0b0b0f;
+            font-weight: 600;
+            white-space: nowrap;
+            user-select: none;
+            pointer-events: none;
+            transition: opacity .3s ease;
+            z-index: 5;
+        }
+
+        .remote-caret.hide-name > div {
+            opacity: 0;
+        }
+
+        .remote-caret:hover > div {
+            opacity: 1;
+        }
+
+        #live-status {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: var(--muted);
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        #live-status .live-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--muted2);
+        }
+
+        #live-status.live .live-dot {
+            background: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, .15);
+        }
+
+        .peer-chip {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: 700;
+            color: #0b0b0f;
+            margin-left: -4px;
+            border: 1.5px solid var(--bg2);
+        }
+
+        #dirty-dot {
+            flex-shrink: 0;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #fbbf24;
+            display: none;
+        }
+
+        /* ── Run output ── */
+        #run-output {
+            display: none;
+            flex-direction: column;
+            height: 34%;
+            min-height: 120px;
+            border-top: 1px solid var(--border);
+            background: var(--bg2);
+        }
+
+        #run-output.open {
+            display: flex;
+        }
+
+        #run-log {
+            flex: 1;
+            overflow: auto;
+            padding: 8px 14px;
+            font-size: 12px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        #run-log .lvl-error { color: #f87171; }
+        #run-log .lvl-warn { color: #fbbf24; }
+        #run-log .lvl-result { color: #818cf8; }
+        #run-log .lvl-meta { color: var(--muted2); font-size: 11px; }
+
+        #run-preview {
+            flex: 1;
+            border: 0;
+            background: #fff;
+            display: none;
+        }
+
+        /* ── Voice ── */
+        .voice-person {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 6px;
+            border-radius: 8px;
+            font-size: 11px;
+            color: var(--text);
+        }
+
+        .voice-person .msg-avatar {
+            width: 24px;
+            height: 24px;
+            font-size: 9px;
+            transition: box-shadow .12s ease;
+        }
+
+        .voice-person.speaking .msg-avatar {
+            box-shadow: 0 0 0 2px #22c55e;
+        }
+
+        .voice-btn.active {
+            background: rgba(34, 197, 94, .12) !important;
+            color: #4ade80 !important;
+            border-color: rgba(34, 197, 94, .3) !important;
+        }
+
+        .voice-btn.danger-on {
+            background: rgba(239, 68, 68, .12) !important;
+            color: #f87171 !important;
+            border-color: rgba(239, 68, 68, .3) !important;
+        }
+
+        /* ── System messages ── */
+        .msg.system {
+            justify-content: center;
+            padding-top: 4px;
+            padding-bottom: 4px;
+        }
+
+        .msg.system .sys-text {
+            font-size: 11px;
+            color: var(--muted);
+            background: var(--bg3);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 3px 12px;
+            max-width: 90%;
+        }
+
+        .msg.system .sys-text code {
+            font-size: 10px;
+        }
+
+        /* ── Diff / settings modals ── */
+        .modal-box.wide {
+            max-width: 880px;
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-box.medium {
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        #diff-body {
+            flex: 1;
+            overflow: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.5;
+            min-height: 120px;
+        }
+
+        .diff-line {
+            display: flex;
+            white-space: pre;
+        }
+
+        .diff-line .no {
+            width: 42px;
+            flex-shrink: 0;
+            text-align: right;
+            padding-right: 8px;
+            color: var(--muted2);
+            user-select: none;
+        }
+
+        .diff-line .tx {
+            padding-left: 8px;
+            flex: 1;
+        }
+
+        .diff-line.add { background: rgba(34, 197, 94, .1); }
+        .diff-line.add .tx { color: #4ade80; }
+        .diff-line.del { background: rgba(239, 68, 68, .1); }
+        .diff-line.del .tx { color: #f87171; }
+        .diff-line.gap { color: var(--muted2); background: var(--bg3); justify-content: center; }
+
+        #ai-review {
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text);
+            margin-top: 10px;
+            max-height: 30vh;
+            overflow: auto;
+        }
+
+        #ai-review ul { padding-left: 18px; list-style: disc; }
+
+        .field-label {
+            font-size: 10px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin: 12px 0 4px;
+            display: block;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text);
+            margin-top: 12px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -1491,6 +1758,75 @@
         </div>
     </div>
 
+    <!-- SETTINGS MODAL -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal-box medium">
+            <div class="modal-title"><i class="fa-solid fa-gear text-indigo-400 mr-2"></i>Room Settings</div>
+
+            <label class="field-label" for="set-name">Room name</label>
+            <input class="input-field" id="set-name" maxlength="80" />
+            <label class="field-label" for="set-desc">Description</label>
+            <input class="input-field" id="set-desc" maxlength="300" />
+
+            <div class="modal-title" style="margin-top:22px;font-size:13px;">
+                <i class="fa-brands fa-github mr-2"></i>GitHub sync
+            </div>
+            <div class="modal-desc" style="margin-bottom:4px;">
+                Approved PRs (and admin saves) are committed to this repo automatically. Use a
+                fine-grained token with <strong>Contents: read &amp; write</strong> on the repo.
+            </div>
+            <label class="field-label" for="set-repo">Repository</label>
+            <input class="input-field" id="set-repo" placeholder="https://github.com/owner/repo" />
+            <div class="settings-row">
+                <div style="flex:1;">
+                    <label class="field-label" for="set-branch">Branch</label>
+                    <input class="input-field" id="set-branch" placeholder="main" />
+                </div>
+                <div style="flex:1;">
+                    <label class="field-label" for="set-base">Folder in repo</label>
+                    <input class="input-field" id="set-base" placeholder="(repo root)" />
+                </div>
+            </div>
+            <label class="field-label" for="set-token">Access token</label>
+            <input class="input-field" id="set-token" type="password" autocomplete="off" placeholder="github_pat_..." />
+            <div id="set-token-hint" style="font-size:10px;color:var(--muted);margin-top:4px;"></div>
+            <label class="toggle-row"><input type="checkbox" id="set-autopush" /> Auto-push to GitHub when a PR is merged</label>
+
+            <div class="flex gap-2 mt-4">
+                <button class="btn-ghost-sm flex-1" onclick="window.testGithub()" id="btn-test-gh">
+                    <i class="fa-solid fa-plug mr-1"></i>Test connection
+                </button>
+                <button class="btn-ghost-sm flex-1" onclick="window.pushAllToGithub()" id="btn-push-gh">
+                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i>Push all files now
+                </button>
+            </div>
+
+            <div class="flex gap-3 mt-5">
+                <button class="btn-ghost-sm flex-1" onclick="closeModal('settings-modal')">Cancel</button>
+                <button class="btn-primary flex-1" onclick="window.saveSettings()" id="btn-save-settings">Save</button>
+            </div>
+            <button class="btn-danger w-full mt-4" onclick="window.deleteRoom()">
+                <i class="fa-solid fa-trash"></i> Delete room
+            </button>
+        </div>
+    </div>
+
+    <!-- DIFF MODAL -->
+    <div class="modal-overlay" id="diff-modal">
+        <div class="modal-box wide">
+            <div class="flex items-center justify-between mb-3 gap-3">
+                <div class="min-w-0">
+                    <div class="modal-title" style="margin:0;" id="diff-title">Pull request</div>
+                    <div style="font-size:11px;color:var(--muted);" id="diff-meta"></div>
+                </div>
+                <button class="icon-btn" onclick="closeModal('diff-modal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div id="diff-body"></div>
+            <div id="ai-review"></div>
+            <div class="flex gap-2 mt-3" id="diff-actions"></div>
+        </div>
+    </div>
+
     <!-- MAIN APP -->
     <div id="app" style="display:none;">
 
@@ -1516,7 +1852,7 @@
                 </div>
                 <!-- Admin actions -->
                 <div id="admin-actions" class="flex gap-2 mt-3" style="display:none!important;">
-                    <button class="icon-btn active" title="Room Settings" onclick="">
+                    <button class="icon-btn active" title="Room Settings" onclick="window.openSettings()">
                         <i class="fa-solid fa-gear"></i>
                     </button>
                     <button class="icon-btn" title="Regenerate Invite" onclick="window.regenInvite()">
@@ -1525,24 +1861,28 @@
                 </div>
             </div>
 
-            <!-- Voice / Video — coming soon -->
+            <!-- Voice -->
             <div class="sidebar-section">
                 <div class="sidebar-label">
-                    Voice & Video
-                    <span class="coming-soon">Soon</span>
+                    Voice
+                    <span id="voice-count" style="color:var(--muted);"></span>
                 </div>
                 <div class="flex gap-2">
-                    <button class="icon-btn flex-1 opacity-40" title="Voice — Coming Soon" disabled
-                        style="width:auto;padding:0 10px;">
-                        <i class="fa-solid fa-microphone mr-1"></i>
-                        <span style="font-size:10px;">Voice</span>
+                    <button class="icon-btn voice-btn flex-1" id="voice-join-btn" onclick="window.toggleVoice()"
+                        title="Join voice" style="width:auto;padding:0 10px;">
+                        <i class="fa-solid fa-phone mr-1"></i>
+                        <span style="font-size:10px;" id="voice-join-label">Join</span>
                     </button>
-                    <button class="icon-btn flex-1 opacity-40" title="Video — Coming Soon" disabled
-                        style="width:auto;padding:0 10px;">
-                        <i class="fa-solid fa-video mr-1"></i>
-                        <span style="font-size:10px;">Video</span>
+                    <button class="icon-btn voice-btn" id="voice-mute-btn" onclick="window.toggleMute()"
+                        title="Mute (Ctrl+Shift+M)" style="display:none;">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                    <button class="icon-btn voice-btn" id="voice-deafen-btn" onclick="window.toggleDeafen()"
+                        title="Deafen" style="display:none;">
+                        <i class="fa-solid fa-headphones"></i>
                     </button>
                 </div>
+                <div id="voice-list" class="mt-2"></div>
             </div>
 
             <!-- Members -->
@@ -1578,7 +1918,7 @@
             <div id="topbar">
                 <!-- Sidebar toggle -->
                 <button class="icon-btn" onclick="window.toggleSidebar()" id="sidebar-toggle" title="Toggle Sidebar">
-                    <i class="fa-solid fa-sidebar"></i>
+                    <i class="fa-solid fa-bars"></i>
                 </button>
 
                 <!-- Room name in topbar (when sidebar collapsed) -->
@@ -1730,8 +2070,29 @@
 
                             <div style="flex:1;"></div>
 
-                            <button id="pr-btn" onclick="window.submitPR()" class="icon-btn"
-                                title="Submit Pull Request (Ctrl+S)" style="padding: 0 3px 0 3px; width: 50px;">
+                            <span id="live-status" title="Live collaboration">
+                                <span class="live-dot"></span><span id="live-label">offline</span>
+                                <span id="live-peers" style="display:inline-flex;margin-left:6px;"></span>
+                            </span>
+                            <span id="dirty-dot" title="Changes not yet saved as a PR"></span>
+
+                            <div style="flex:1;"></div>
+
+                            <button class="icon-btn" id="reset-btn" onclick="window.resetToCommitted()"
+                                title="Discard live changes (reset to committed version)" style="display:none;">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                            <button class="icon-btn" onclick="window.runEditorCode()" title="Run (Ctrl+Enter)"
+                                style="padding:0 6px;width:auto;color:#4ade80;">
+                                <i class="fa-solid fa-play"></i>
+                                <span style="font-size:11px;margin-left:4px;">Run</span>
+                            </button>
+                            <button class="icon-btn" onclick="window.askAIAboutCode()" title="Ask AI about this code">
+                                <i class="fa-solid fa-wand-magic-sparkles" style="color:#a78bfa;"></i>
+                            </button>
+                            <button id="save-btn" onclick="window.submitPR()" class="icon-btn"
+                                title="Save — submits a PR, admins merge directly (Ctrl+S)"
+                                style="padding: 0 6px; width: auto;">
                                 <i class="fa-solid fa-floppy-disk"></i>
                                 <span style="font-size:11px;margin-left:4px;">Save</span>
                             </button>
@@ -1743,6 +2104,23 @@
 
                         <!-- CodeMirror mounts here -->
                         <div id="editor-container" style="flex:1;overflow:hidden;"></div>
+
+                        <!-- Run output -->
+                        <div id="run-output">
+                            <div class="panel-header" style="height:32px;">
+                                <span class="panel-title" id="run-title">Output</span>
+                                <div class="flex gap-1">
+                                    <button class="icon-btn" onclick="window.clearRunOutput()" title="Clear">
+                                        <i class="fa-solid fa-broom text-xs"></i>
+                                    </button>
+                                    <button class="icon-btn" onclick="window.closeRunOutput()" title="Close">
+                                        <i class="fa-solid fa-xmark text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="run-log"></div>
+                            <iframe id="run-preview" sandbox="allow-scripts allow-modals" title="HTML preview"></iframe>
+                        </div>
                     </div>
 
                     <!-- PR panel -->
@@ -1802,7 +2180,7 @@
                             </div>
                         </div>
                         <p class="text-center mt-2" style="font-size:10px;color:var(--muted2);">
-                            Powered by Gemini 1.5 Flash
+                            Powered by Gemini
                         </p>
                     </div>
                 </div>
@@ -1829,10 +2207,15 @@
         import {
             getFirestore,
             doc, collection,
-            onSnapshot, addDoc, updateDoc, deleteDoc,
+            onSnapshot, addDoc, updateDoc, setDoc, deleteDoc,
             query, orderBy, limit, startAfter,
-            serverTimestamp, getDoc, getDocs
+            serverTimestamp, getDocs
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { DOMPurify } from '/assets/vendor/collab.bundle.js';
+        import { FirestoreYProvider, colorFor } from '/assets/js/collab.js';
+        import { VoiceRoom } from '/assets/js/voice.js';
+        import { runCode, runtimeFor } from '/assets/js/runner.js';
+        import { diffLines, diffStats, unifiedDiff } from '/assets/js/diff.js';
 
         // ── Init ──────────────────────────────────────
         const firebaseConfig = await fetch('/api/config').then(r => r.json());
@@ -1850,36 +2233,68 @@
         let mentionIndex = 0;
         let mentionList = [];
         let aiHistory = [];
+        let aiPendingContext = null;
         let editorInstance = null;
-        let editorDirty = false;
         let unsubMessages = null;
         let unsubTyping = null;
         let unsubFiles = null;
         let unsubPRs = null;
+        let unsubRoom = null;
+        let unsubPresence = null;
         let ctxTarget = null;
         let kickTarget = null;
         let roleTarget = null;
         let prList = [];
         let files = [];
         let activeFileId = null;
+        let pendingOpenFileId = null;
+        let live = null;              // FirestoreYProvider for the open file
+        let liveSwitch = Promise.resolve();
         let typingTimer = null;
+        let lastTypingPing = 0;
         let pendingAttachment = null;
         let oldestMessageSnap = null;
         let loadingOlderMsgs = false;
         let noMoreMessages = false;
         let initialLoadDone = false;
+        let voice = null;
+        let voiceState = { joined: false, participants: [] };
+        let presence = {};
+        let presenceTimer = null;
+        let diffPR = null;
+
+        const canEdit = () => myRole === 'admin' || myRole === 'member';
 
         // ─────────────────────────────────────────────
         //  HELPERS
         // ─────────────────────────────────────────────
         function esc(str) {
-            return String(str || '')
+            return String(str ?? '')
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
 
+        // Only http(s) URLs may end up in src/href attributes.
+        function safeUrl(url) {
+            try {
+                const u = new URL(url, location.origin);
+                return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : '';
+            } catch { return ''; }
+        }
+
+        const sanitize = html => DOMPurify.sanitize(html || '', { USE_PROFILES: { html: true } });
+
         function getInitials(name) {
-            return (name || '?').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            return (name || '?').split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
+        }
+
+        // Avatar markup with an initials fallback that never interpolates names into JS.
+        function avatarInner(photo, name) {
+            const url = safeUrl(photo);
+            const initials = esc(getInitials(name));
+            return url
+                ? `<img src="${esc(url)}" alt="" data-fallback="${initials}" onerror="this.parentElement.textContent=this.dataset.fallback">`
+                : initials;
         }
 
         function formatTime(ts) {
@@ -1888,7 +2303,28 @@
             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
+        function tsMillis(ts) {
+            if (!ts) return 0;
+            return ts.toMillis ? ts.toMillis() : new Date(ts).getTime();
+        }
+
         function getToken() { return currentUser?.getIdToken(); }
+
+        async function api(url, { method = 'GET', body } = {}) {
+            const token = await getToken();
+            const res = await fetch(url, {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    ...(body !== undefined ? { 'Content-Type': 'application/json' } : {})
+                },
+                body: body !== undefined ? JSON.stringify(body) : undefined
+            });
+            let data = {};
+            try { data = await res.json(); } catch { }
+            if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+            return data;
+        }
 
         function hideLoader() {
             const l = document.getElementById('page-loader');
@@ -1904,6 +2340,7 @@
         // ─────────────────────────────────────────────
         //  TOAST
         // ─────────────────────────────────────────────
+        let toastTimer = null;
         function showToast(msg, type = 'info') {
             const t = document.getElementById('toast');
             const tm = document.getElementById('toast-msg');
@@ -1914,7 +2351,8 @@
                     type === 'success' ? 'fa-solid fa-circle-check  text-green-400' :
                         'fa-solid fa-circle-info   text-indigo-400';
             t.className = `show ${type}`;
-            setTimeout(() => { t.className = ''; }, 3500);
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => { t.className = ''; }, 3500);
         }
         window.showToast = showToast;
 
@@ -1957,7 +2395,7 @@
 
             // Step 4 — @mentions
             text = text.replace(/@ai\b/g, '<span class="mention-ai">@ai</span>');
-            text = text.replace(/@([\w]+)/g, '<span class="mention-user">@$1</span>');
+            text = text.replace(/@(?!ai\b)([\w]+)/g, '<span class="mention-user">@$1</span>');
 
             // Step 5 — bold / italic
             text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -1980,6 +2418,7 @@
         window.togglePanel = (name) => {
             panelState[name] = !panelState[name];
             applyPanels();
+            if (name === 'code' && currentUser) publishPresence();
         };
 
         window.focusPanel = (name) => {
@@ -1996,7 +2435,7 @@
                 if (!wrap) return;
                 if (panelState[p]) {
                     wrap.style.display = 'flex';
-                    wrap.style.flexDirection = 'column';
+                    wrap.style.flexDirection = p === 'code' ? 'row' : 'column';
                     if (tab) tab.style.display = 'flex';
                     if (btn) btn.classList.add('active');
                 } else {
@@ -2063,33 +2502,106 @@
         };
 
         // ─────────────────────────────────────────────
+        //  ROOM (realtime) + PRESENCE
+        // ─────────────────────────────────────────────
+        function applyRoom(room) {
+            currentRoom = room;
+            members = room.members || {};
+            const prevRole = myRole;
+            myRole = members[currentUser.uid]?.role || 'member';
+
+            document.getElementById('sidebar-room-name').textContent = room.name;
+            document.getElementById('sidebar-code').textContent = room.inviteCode;
+            document.getElementById('topbar-room').textContent = room.name;
+            document.title = `${room.name} — Learnkins Room`;
+            document.getElementById('admin-actions').style.cssText = myRole === 'admin' ? 'display:flex;' : 'display:none!important;';
+
+            renderMembers();
+            if (prevRole !== myRole) {
+                renderFileList();
+                renderPRs();
+                if (editorInstance) editorInstance.setOption('readOnly', canEdit() ? false : 'nocursor');
+                if (myRole === 'viewer') showToast('You are now a viewer (read-only).', 'info');
+            }
+        }
+
+        function subscribeRoom() {
+            const lostAccess = () => {
+                showToast('You no longer have access to this room.', 'error');
+                teardown();
+                setTimeout(() => { window.location.href = '/lobby/'; }, 1500);
+            };
+            unsubRoom = onSnapshot(doc(db, 'rooms', roomId), snap => {
+                if (!snap.exists() || !snap.data().members?.[currentUser.uid]) return lostAccess();
+                applyRoom({ id: snap.id, ...snap.data() });
+            }, err => {
+                // Rules deny reads once you're removed from the room.
+                if (err.code === 'permission-denied') lostAccess();
+                else console.warn('room listener:', err.message);
+            });
+        }
+
+        function presenceRef() { return doc(db, 'rooms', roomId, 'presence', currentUser.uid); }
+
+        function publishPresence() {
+            const file = files.find(f => f.id === activeFileId);
+            setDoc(presenceRef(), {
+                name: currentUser.displayName || currentUser.email || 'Someone',
+                photo: currentUser.photoURL || '',
+                file: panelState.code && file ? file.fileName : '',
+                updatedAt: serverTimestamp()
+            }).catch(() => { });
+        }
+
+        function subscribePresence() {
+            publishPresence();
+            presenceTimer = setInterval(publishPresence, 30000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) publishPresence(); });
+            unsubPresence = onSnapshot(collection(db, 'rooms', roomId, 'presence'), snap => {
+                presence = {};
+                snap.docs.forEach(d => { presence[d.id] = d.data(); });
+                renderMembers();
+            });
+            setInterval(renderMembers, 30000); // age out stale entries
+        }
+
+        function isOnline(uid) {
+            if (uid === currentUser?.uid) return true;
+            const p = presence[uid];
+            if (!p) return false;
+            const at = tsMillis(p.updatedAt) || Date.now();
+            return Date.now() - at < 75000;
+        }
+
+        // ─────────────────────────────────────────────
         //  MEMBERS
         // ─────────────────────────────────────────────
         function renderMembers() {
             const list = document.getElementById('members-list');
-            const keys = Object.keys(members);
-            document.getElementById('member-count').textContent = keys.length;
+            const keys = Object.keys(members).sort((a, b) => Number(isOnline(b)) - Number(isOnline(a)));
+            document.getElementById('member-count').textContent =
+                `${keys.filter(isOnline).length}/${keys.length}`;
 
             list.innerHTML = keys.map(uid => {
                 const m = members[uid];
+                const online = isOnline(uid);
+                const editing = online && presence[uid]?.file;
                 const roleIcon =
                     m.role === 'admin' ? '<i class="fa-solid fa-crown" style="font-size:8px;color:#818cf8;"></i>' :
                         m.role === 'viewer' ? '<i class="fa-solid fa-eye"   style="font-size:8px;color:#fbbf24;"></i>' : '';
 
                 return `
-        <div class="member-item" data-uid="${uid}"
-             oncontextmenu="window.openCtxMenu(event,'${uid}')"
-             onclick="window.openCtxMenu(event,'${uid}')">
-          <div class="msg-avatar" style="width:26px;height:26px;font-size:9px;">
-            ${m.photoURL
-                        ? `<img src="${esc(m.photoURL)}" alt=""
-                      onerror="this.parentElement.textContent='${getInitials(m.displayName)}'">`
-                        : getInitials(m.displayName)}
+        <div class="member-item" data-uid="${esc(uid)}" style="${online ? '' : 'opacity:.55;'}"
+             oncontextmenu="window.openCtxMenu(event,'${esc(uid)}')"
+             onclick="window.openCtxMenu(event,'${esc(uid)}')">
+          <div class="msg-avatar" style="width:26px;height:26px;font-size:9px;position:relative;">
+            ${avatarInner(m.photoURL, m.displayName)}
           </div>
           <div class="member-name">
             <span>${esc(m.displayName || 'Unknown')}</span>
-            <span class="member-role">${m.role} ${roleIcon}</span>
+            <span class="member-role">${esc(m.role)} ${roleIcon}${editing ? ` · <i class="fa-solid fa-code" style="font-size:8px;"></i> ${esc(editing)}` : ''}</span>
           </div>
+          <span class="online-dot ${online ? '' : 'offline-dot'}" title="${online ? 'online' : 'offline'}"></span>
           ${uid === currentUser?.uid
                         ? '<span style="font-size:9px;color:var(--indigo2);">you</span>'
                         : ''}
@@ -2124,7 +2636,7 @@
             const m = members[ctxTarget];
             if (!m) return;
             const inp = document.getElementById('chat-input');
-            inp.value += `@${m.displayName} `;
+            inp.value += `@${(m.displayName || '').split(' ')[0]} `;
             inp.focus();
         };
 
@@ -2137,11 +2649,7 @@
         window.confirmKick = async () => {
             if (!kickTarget) return;
             try {
-                const token = await getToken();
-                const res = await fetch(`/api/rooms/${roomId}/members/${kickTarget}`, {
-                    method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!res.ok) throw new Error((await res.json()).error);
+                await api(`/api/rooms/${roomId}/members/${kickTarget}`, { method: 'DELETE' });
                 showToast('Member removed.', 'success');
                 closeModal('kick-modal');
             } catch (err) { showToast(err.message, 'error'); }
@@ -2156,13 +2664,7 @@
         window.setMemberRole = async (role) => {
             if (!roleTarget) return;
             try {
-                const token = await getToken();
-                const res = await fetch(`/api/rooms/${roomId}/members/${roleTarget}/role`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ role })
-                });
-                if (!res.ok) throw new Error((await res.json()).error);
+                await api(`/api/rooms/${roomId}/members/${roleTarget}/role`, { method: 'PATCH', body: { role } });
                 showToast(`Role updated to ${role}.`, 'success');
                 closeModal('role-modal');
             } catch (err) { showToast(err.message, 'error'); }
@@ -2187,15 +2689,92 @@
 
         window.regenInvite = async () => {
             try {
-                const token = await getToken();
-                const res = await fetch(`/api/invite/${roomId}/regenerate`, {
-                    method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
-                currentRoom.inviteCode = data.inviteCode;
-                document.getElementById('sidebar-code').textContent = data.inviteCode;
+                const data = await api(`/api/invite/${roomId}/regenerate`, { method: 'POST' });
                 showToast('New code: ' + data.inviteCode, 'success');
+            } catch (err) { showToast(err.message, 'error'); }
+        };
+
+        // ─────────────────────────────────────────────
+        //  ROOM SETTINGS + GITHUB
+        // ─────────────────────────────────────────────
+        window.openSettings = async () => {
+            if (myRole !== 'admin') return;
+            document.getElementById('set-name').value = currentRoom?.name || '';
+            document.getElementById('set-desc').value = currentRoom?.description || '';
+            document.getElementById('set-repo').value = currentRoom?.githubRepo || '';
+            document.getElementById('set-branch').value = currentRoom?.githubBranch || 'main';
+            document.getElementById('set-base').value = currentRoom?.githubBasePath || '';
+            document.getElementById('set-autopush').checked = currentRoom?.githubAutoPush === true;
+            document.getElementById('set-token').value = '';
+            const hint = document.getElementById('set-token-hint');
+            hint.textContent = 'Checking…';
+            openModal('settings-modal');
+            try {
+                const gh = await api(`/api/rooms/${roomId}/github`);
+                hint.textContent = gh.tokenSource === 'room'
+                    ? 'A token is saved for this room. Leave blank to keep it; type "clear" to remove it.'
+                    : gh.tokenSource === 'server'
+                        ? 'Using the server-wide GITHUB_TOKEN. Paste a token to use a room-specific one.'
+                        : 'No token yet — paste one to enable pushing.';
+            } catch (err) { hint.textContent = err.message; }
+        };
+
+        function settingsPayload() {
+            const token = document.getElementById('set-token').value.trim();
+            return {
+                name: document.getElementById('set-name').value.trim(),
+                description: document.getElementById('set-desc').value.trim(),
+                githubRepo: document.getElementById('set-repo').value.trim(),
+                githubBranch: document.getElementById('set-branch').value.trim() || 'main',
+                githubBasePath: document.getElementById('set-base').value.trim(),
+                githubAutoPush: document.getElementById('set-autopush').checked,
+                ...(token && { githubToken: token.toLowerCase() === 'clear' ? '' : token })
+            };
+        }
+
+        async function withBusy(btnId, fn) {
+            const btn = document.getElementById(btnId);
+            const html = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            try { return await fn(); } finally { btn.disabled = false; btn.innerHTML = html; }
+        }
+
+        window.saveSettings = () => withBusy('btn-save-settings', async () => {
+            try {
+                await api(`/api/rooms/${roomId}`, { method: 'PATCH', body: settingsPayload() });
+                showToast('Settings saved.', 'success');
+                closeModal('settings-modal');
+            } catch (err) { showToast(err.message, 'error'); }
+        });
+
+        window.testGithub = () => withBusy('btn-test-gh', async () => {
+            try {
+                await api(`/api/rooms/${roomId}`, { method: 'PATCH', body: settingsPayload() });
+                document.getElementById('set-token').value = '';
+                const info = await api(`/api/rooms/${roomId}/github/test`, { method: 'POST' });
+                showToast(`Connected to ${info.fullName} — push access OK.`, 'success');
+                document.getElementById('set-token-hint').textContent = 'A token is saved for this room. Leave blank to keep it; type "clear" to remove it.';
+            } catch (err) { showToast(err.message, 'error'); }
+        });
+
+        window.pushAllToGithub = () => withBusy('btn-push-gh', async () => {
+            try {
+                await api(`/api/rooms/${roomId}`, { method: 'PATCH', body: settingsPayload() });
+                document.getElementById('set-token').value = '';
+                const r = await api(`/api/rooms/${roomId}/github/push`, { method: 'POST', body: {} });
+                showToast(`Pushed to GitHub (${(r.sha || '').slice(0, 7)}).`, 'success');
+            } catch (err) { showToast(err.message, 'error'); }
+        });
+
+        window.deleteRoom = async () => {
+            const typed = prompt(`This permanently deletes "${currentRoom?.name}" with all messages and files.\nType the room name to confirm:`);
+            if (typed === null) return;
+            if (typed.trim() !== currentRoom?.name) { showToast('Name did not match — room kept.', 'info'); return; }
+            try {
+                teardown();
+                await api(`/api/rooms/${roomId}`, { method: 'DELETE' });
+                window.location.href = '/lobby/';
             } catch (err) { showToast(err.message, 'error'); }
         };
 
@@ -2203,19 +2782,33 @@
         //  BUILD MESSAGE HTML
         // ─────────────────────────────────────────────
         function buildMsgHTML(msg) {
+            if (msg.isSystem && msg.uid === 'system') {
+                const commit = safeUrl(msg.github?.commitUrl);
+                return `
+    <div class="msg system" id="msg-${esc(msg.id)}">
+      <div class="sys-text">
+        <i class="fa-solid ${msg.github ? (msg.github.error ? 'fa-triangle-exclamation text-red-400' : 'fa-brands fa-github') : 'fa-circle-info'} mr-1"></i>
+        ${parseMessageText(msg.text || '')}
+        ${commit ? ` · <a href="${esc(commit)}" target="_blank" rel="noopener noreferrer" style="color:var(--indigo2);">view commit</a>` : ''}
+        <span class="msg-time" style="margin-left:6px;">${formatTime(msg.createdAt)}</span>
+      </div>
+    </div>`;
+            }
+
             const m = members[msg.uid] || {};
             const isMe = msg.uid === currentUser?.uid;
             const isAdmin = myRole === 'admin';
-            const canEdit = isMe && !msg.deleted;
+            const isAI = msg.isAI && msg.uid === 'ai';
+            const canEditMsg = isMe && !msg.deleted;
             const canDel = (isMe || isAdmin) && !msg.deleted;
-            const initials = getInitials(m.displayName || msg.displayName || '?');
+            const name = m.displayName || msg.displayName || 'Unknown';
             const photo = m.photoURL || msg.photoURL || '';
 
             let textContent = '';
             if (msg.deleted) {
                 textContent = '<em style="color:var(--muted2);">Message deleted</em>';
-            } else if (msg.isAI && msg.textHtml) {
-                textContent = msg.textHtml;
+            } else if (isAI && msg.textHtml) {
+                textContent = sanitize(msg.textHtml);
             } else {
                 textContent = parseMessageText(msg.text || '');
             }
@@ -2224,8 +2817,8 @@
             if (msg.replyTo) {
                 const rm = members[msg.replyTo.uid] || {};
                 replyHTML = `
-      <div class="reply-quote"
-           onclick="document.getElementById('msg-${msg.replyTo.id}')?.scrollIntoView({behavior:'smooth'})">
+      <div class="reply-quote" data-target="msg-${esc(msg.replyTo.id)}"
+           onclick="document.getElementById(this.dataset.target)?.scrollIntoView({behavior:'smooth'})">
         <strong>${esc(rm.displayName || msg.replyTo.name || 'Unknown')}</strong>:
         ${esc((msg.replyTo.text || '').slice(0, 60))}${(msg.replyTo.text?.length || 0) > 60 ? '...' : ''}
       </div>`;
@@ -2233,40 +2826,38 @@
 
             let attachHTML = '';
             if (msg.attachment && !msg.deleted) {
-                const { type, url, name } = msg.attachment;
-                if (type === 'image') {
+                const { type, name: fileName } = msg.attachment;
+                const url = esc(safeUrl(msg.attachment.url));
+                if (url && type === 'image') {
                     attachHTML = `
     <div class="msg-attachment">
-      <img src="${esc(url)}" alt="${esc(name)}"
-        style="max-width:320px;max-height:240px;border-radius:8px;cursor:pointer;margin-top:6px;display:block;"
-        onclick="window.open('${esc(url)}','_blank')"
-        data-err="<span style='font-size:11px;color:var(--muted2);'>Image failed to load</span>"
-        onerror="this.parentElement.innerHTML=this.dataset.err">
+      <a href="${url}" target="_blank" rel="noopener noreferrer">
+        <img src="${url}" alt="${esc(fileName)}"
+          style="max-width:320px;max-height:240px;border-radius:8px;cursor:pointer;margin-top:6px;display:block;"
+          onerror="this.closest('.msg-attachment').innerHTML='<span style=&quot;font-size:11px;color:var(--muted2);&quot;>Image failed to load</span>'">
+      </a>
     </div>`;
                 }
-                else if (type === 'video') {
+                else if (url && type === 'video') {
                     attachHTML = `
         <div class="msg-attachment" style="margin-top:6px;">
           <video controls
             style="max-width:320px;border-radius:8px;display:block;background:#000;">
-            <source src="${esc(url)}">
+            <source src="${url}">
             Your browser does not support video.
           </video>
         </div>`;
-                } else if (type === 'pdf') {
+                } else if (url && type === 'pdf') {
                     attachHTML = `
         <div class="msg-attachment" style="margin-top:6px;">
-          <a href="${esc(url)}" target="_blank" rel="noopener noreferrer"
+          <a href="${url}" target="_blank" rel="noopener noreferrer"
              style="display:inline-flex;align-items:center;gap:8px;
                     padding:8px 14px;background:var(--bg3);
                     border:1px solid var(--border);border-radius:8px;
-                    color:var(--indigo2);font-size:12px;text-decoration:none;
-                    transition:background 0.15s ease;"
-             onmouseover="this.style.background='var(--bg2)'"
-             onmouseout="this.style.background='var(--bg3)'">
+                    color:var(--indigo2);font-size:12px;text-decoration:none;">
             <i class="fa-solid fa-file-pdf" style="color:#f87171;font-size:14px;"></i>
             <span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;
-                         white-space:nowrap;">${esc(name)}</span>
+                         white-space:nowrap;">${esc(fileName)}</span>
             <i class="fa-solid fa-arrow-up-right-from-square"
                style="font-size:9px;opacity:0.6;flex-shrink:0;"></i>
           </a>
@@ -2275,43 +2866,39 @@
             }
 
             return `
-    <div class="msg" id="msg-${msg.id}">
+    <div class="msg" id="msg-${esc(msg.id)}">
       <div class="msg-avatar">
-        ${photo
-                    ? `<img src="${esc(photo)}" alt=""
-                  onerror="this.parentElement.textContent='${initials}'">`
-                    : initials}
+        ${isAI ? '<i class="fa-solid fa-wand-magic-sparkles" style="color:#a78bfa;"></i>' : avatarInner(photo, name)}
       </div>
       <div class="msg-body">
         ${replyHTML}
         <div class="msg-meta">
-          <span class="msg-name ${msg.isAI ? 'ai' : ''}">
-            ${msg.isAI ? '<i class="fa-solid fa-wand-magic-sparkles mr-1" style="font-size:9px;"></i>' : ''}
-            ${esc(m.displayName || msg.displayName || 'Unknown')}
+          <span class="msg-name ${isAI ? 'ai' : ''}">
+            ${isAI ? '<i class="fa-solid fa-wand-magic-sparkles mr-1" style="font-size:9px;"></i>' : ''}
+            ${esc(name)}
           </span>
           <span class="msg-time">${formatTime(msg.createdAt)}</span>
           ${msg.edited ? '<span style="font-size:10px;color:var(--muted2);">(edited)</span>' : ''}
         </div>
         ${attachHTML}
         <div class="msg-text ${msg.deleted ? 'deleted' : ''}"
-             id="msg-text-${msg.id}">${textContent}</div>
+             id="msg-text-${esc(msg.id)}">${textContent}</div>
       </div>
       <div class="msg-actions">
-        <button class="icon-btn" onclick="window.replyMsg('${msg.id}')" title="Reply">
+        <button class="icon-btn" onclick="window.replyMsg('${esc(msg.id)}')" title="Reply">
           <i class="fa-solid fa-reply"></i>
         </button>
-        ${canEdit ? `
-        <button class="icon-btn" onclick="window.editMsg('${msg.id}')" title="Edit">
+        ${canEditMsg ? `
+        <button class="icon-btn" onclick="window.editMsg('${esc(msg.id)}')" title="Edit">
           <i class="fa-solid fa-pen"></i>
         </button>` : ''}
         ${canDel ? `
-        <button class="icon-btn danger" onclick="window.deleteMsg('${msg.id}')" title="Delete">
+        <button class="icon-btn danger" onclick="window.deleteMsg('${esc(msg.id)}')" title="Delete">
           <i class="fa-solid fa-trash"></i>
         </button>` : ''}
       </div>
     </div>`;
         }
-
 
         function appendMessage(msg) {
             const container = document.getElementById('messages');
@@ -2340,7 +2927,6 @@
                 el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
             }
         }
-
 
         // ─────────────────────────────────────────────
         //  SUBSCRIBE MESSAGES
@@ -2378,12 +2964,23 @@
                         const msg = { id: change.doc.id, ...change.doc.data() };
                         appendMessage(msg);
                         scrollToBottom(msg.uid === currentUser?.uid);
+                        notifyIfMentioned(msg);
                     }
                     if (change.type === 'modified') updateMessageEl(change.doc.id, change.doc.data());
-                    if (change.type === 'removed') document.getElementById(`msg-${change.doc.id}`)?.remove();
+                    // A message falling out of the 50-message window isn't a deletion.
                 });
 
             });
+        }
+
+        // Desktop notification when someone @mentions you while the tab is hidden.
+        function notifyIfMentioned(msg) {
+            if (!document.hidden || msg.uid === currentUser?.uid || !msg.text) return;
+            const first = (currentUser.displayName || '').split(' ')[0];
+            if (!first || !new RegExp(`@${first.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(msg.text)) return;
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(`${msg.displayName || 'Someone'} mentioned you`, { body: msg.text.slice(0, 120) });
+            }
         }
 
         // ─────────────────────────────────────────────
@@ -2398,17 +2995,25 @@
                 files = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderFileList();
 
-                // If active file was updated by an approved PR and editor is clean — sync it
-                if (activeFileId && !editorDirty) {
-                    const updated = files.find(f => f.id === activeFileId);
-                    if (updated && editorInstance) {
-                        const current = editorInstance.getValue();
-                        if (updated.content !== current) {
-                            editorInstance.setValue(updated.content || '');
-                            showToast('File updated by approved PR.', 'info');
-                        }
-                    }
+                if (activeFileId && !files.some(f => f.id === activeFileId)) {
+                    showToast('The open file was deleted.', 'info');
+                    activeFileId = null;
+                    // Unbind first so clearing the editor doesn't write into the deleted document.
+                    liveSwitch = liveSwitch.then(closeLive).then(() => {
+                        if (!activeFileId) { editorInstance?.setValue(''); updateDirty(); }
+                    });
                 }
+                if (pendingOpenFileId && files.some(f => f.id === pendingOpenFileId)) {
+                    const id = pendingOpenFileId;
+                    pendingOpenFileId = null;
+                    window.openFile(id);
+                }
+                const active = files.find(f => f.id === activeFileId);
+                if (active) {
+                    document.getElementById('file-name').value = active.fileName;
+                    document.getElementById('tab-code-name').textContent = active.fileName;
+                }
+                updateDirty();
             });
         }
 
@@ -2431,15 +3036,24 @@
         //  SUBSCRIBE TYPING
         // ─────────────────────────────────────────────
         function subscribeTyping() {
+            let latest = [];
+            const render = () => {
+                // Ignore entries left behind by a closed tab.
+                const now = Date.now();
+                renderTypingIndicator(latest
+                    .filter(t => !t.at || now - t.at < 8000)
+                    .map(t => t.name));
+            };
             unsubTyping = onSnapshot(
                 collection(db, 'rooms', roomId, 'typing'),
                 (snap) => {
-                    const typists = snap.docs
+                    latest = snap.docs
                         .filter(d => d.id !== currentUser.uid)
-                        .map(d => d.data().name);
-                    renderTypingIndicator(typists);
+                        .map(d => ({ name: d.data().name, at: tsMillis(d.data().updatedAt) }));
+                    render();
                 }
             );
+            setInterval(render, 4000);
         }
 
         function renderTypingIndicator(typists) {
@@ -2465,6 +3079,13 @@
       </span>`;
         }
 
+        function stopTyping() {
+            clearTimeout(typingTimer);
+            if (!lastTypingPing) return;
+            lastTypingPing = 0;
+            api(`/api/rooms/${roomId}/typing`, { method: 'DELETE' }).catch(() => { });
+        }
+
         // ─────────────────────────────────────────────
         //  SEND MESSAGE
         // ─────────────────────────────────────────────
@@ -2475,11 +3096,7 @@
             // Must have text OR attachment
             if (!text && !pendingAttachment) return;
 
-            clearTimeout(typingTimer);
-            const token = await getToken();
-            fetch(`/api/rooms/${roomId}/typing`, {
-                method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
-            });
+            stopTyping();
 
             inp.value = '';
             inp.style.height = 'auto';
@@ -2503,8 +3120,8 @@
 
                 const ref = await addDoc(collection(db, 'rooms', roomId, 'messages'), msgData);
 
-                if (text.toLowerCase().includes('@ai')) {
-                    handleAIMention(ref.id, text, attachment); // pass attachment
+                if (/@ai\b/i.test(text)) {
+                    handleAIMention(ref.id, text, attachment);
                 }
             } catch (err) {
                 showToast('Failed to send: ' + err.message, 'error');
@@ -2516,33 +3133,26 @@
         async function handleAIMention(triggerMsgId, text, attachment = null) {
             try {
                 const prompt = text.replace(/@ai\b/gi, '').trim();
-                const token = await getToken();
-                const res = await fetch('/api/ai/chat', {
+                const data = await api('/api/ai/chat', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ prompt, roomId, attachment }) // ← pass attachment
+                    body: { prompt, roomId, attachment, replyTo: { id: triggerMsgId, text } }
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
-
-                await addDoc(collection(db, 'rooms', roomId, 'messages'), {
-                    uid: 'ai',
-                    displayName: 'AI Assistant',
-                    photoURL: '',
-                    text: data.reply,
-                    textHtml: data.replyHtml,
-                    isAI: true,
-                    createdAt: serverTimestamp(),
-                    deleted: false,
-                    edited: false,
-                    replyTo: {
-                        id: triggerMsgId,
-                        uid: currentUser.uid,
-                        name: currentUser.displayName || '',
-                        text: document.getElementById(`msg-text-${triggerMsgId}`)
-                            ?.textContent?.slice(0, 60) || ''
-                    }
-                });
+                // The server posts the reply itself; this fallback covers setups
+                // whose rules still let clients write AI messages.
+                if (!data.posted) {
+                    await addDoc(collection(db, 'rooms', roomId, 'messages'), {
+                        uid: 'ai',
+                        displayName: 'AI Assistant',
+                        photoURL: '',
+                        text: data.reply,
+                        textHtml: data.replyHtml,
+                        isAI: true,
+                        createdAt: serverTimestamp(),
+                        deleted: false,
+                        edited: false,
+                        replyTo: { id: triggerMsgId, uid: currentUser.uid, name: currentUser.displayName || '', text: text.slice(0, 60) }
+                    });
+                }
             } catch (err) {
                 showToast('AI error: ' + err.message, 'error');
             }
@@ -2585,8 +3195,8 @@
                 // Save scroll height before prepending
                 const prevScrollHeight = container.scrollHeight;
 
-                const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
-                msgs.forEach(m => prependMessage(m));
+                // Newest of the batch first, so prepending leaves them in order.
+                snap.docs.forEach(d => prependMessage({ id: d.id, ...d.data() }));
 
                 // Restore scroll position
                 container.scrollTop += container.scrollHeight - prevScrollHeight;
@@ -2628,9 +3238,9 @@
         //  REPLY / EDIT / DELETE
         // ─────────────────────────────────────────────
         window.replyMsg = (id) => {
-            const txt = document.getElementById(`msg-text-${id}`)?.textContent || '';
+            const txt = document.getElementById(`msg-text-${id}`)?.textContent?.trim() || '';
             const name = document.querySelector(`#msg-${id} .msg-name`)?.textContent?.trim() || '';
-            replyTo = { id, uid: '', name, text: txt };
+            replyTo = { id, uid: '', name, text: txt.slice(0, 200) };
             document.getElementById('reply-name').textContent = name;
             document.getElementById('reply-preview').textContent = txt.slice(0, 40) + (txt.length > 40 ? '...' : '');
             document.getElementById('reply-bar').classList.add('show');
@@ -2645,15 +3255,16 @@
 
         window.editMsg = (id) => {
             const textEl = document.getElementById(`msg-text-${id}`);
-            const cur = textEl?.textContent || '';
-            if (!textEl) return;
+            if (!textEl || document.getElementById(`edit-inp-${id}`)) return;
+            const cur = textEl.innerText || '';
             textEl.style.display = 'none';
             const editDiv = document.createElement('div');
+            editDiv.className = 'edit-wrap';
             editDiv.innerHTML = `
-      <textarea class="edit-input" id="edit-inp-${id}">${esc(cur)}</textarea>
+      <textarea class="edit-input" id="edit-inp-${esc(id)}">${esc(cur)}</textarea>
       <div class="edit-actions">
-        <button class="edit-save"   onclick="window.saveEdit('${id}')">Save</button>
-        <button class="edit-cancel" onclick="window.cancelEdit('${id}')">Cancel</button>
+        <button class="edit-save"   onclick="window.saveEdit('${esc(id)}')">Save</button>
+        <button class="edit-cancel" onclick="window.cancelEdit('${esc(id)}')">Cancel</button>
       </div>`;
             textEl.parentElement.appendChild(editDiv);
             document.getElementById(`edit-inp-${id}`)?.focus();
@@ -2671,18 +3282,15 @@
         };
 
         window.cancelEdit = (id) => {
-            document.getElementById(`edit-inp-${id}`)?.closest('div')?.remove();
+            document.getElementById(`edit-inp-${id}`)?.closest('.edit-wrap')?.remove();
             const textEl = document.getElementById(`msg-text-${id}`);
             if (textEl) textEl.style.display = '';
         };
 
         window.deleteMsg = async (id) => {
+            if (!confirm('Delete this message?')) return;
             try {
-                const token = await getToken();
-                const res = await fetch(`/api/rooms/${roomId}/messages/${id}`, {
-                    method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!res.ok) throw new Error((await res.json()).error);
+                await api(`/api/rooms/${roomId}/messages/${id}`, { method: 'DELETE' });
             } catch (err) { showToast(err.message, 'error'); }
         };
 
@@ -2694,17 +3302,13 @@
             inp.style.height = 'auto';
             inp.style.height = Math.min(inp.scrollHeight, 120) + 'px';
 
-            getToken().then(token => {
-                fetch(`/api/rooms/${roomId}/typing`, {
-                    method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
-                });
-                clearTimeout(typingTimer);
-                typingTimer = setTimeout(() => {
-                    fetch(`/api/rooms/${roomId}/typing`, {
-                        method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                }, 3000);
-            });
+            // Throttled: one "typing" ping every few seconds, cleared after a pause.
+            if (Date.now() - lastTypingPing > 2500) {
+                lastTypingPing = Date.now();
+                api(`/api/rooms/${roomId}/typing`, { method: 'POST' }).catch(() => { });
+            }
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(stopTyping, 3000);
 
             const val = inp.value;
             const pos = inp.selectionStart;
@@ -2728,9 +3332,13 @@
         function showMentionDropdown(q) {
             const allItems = [
                 { name: 'ai', label: 'AI Assistant', isAI: true },
-                ...Object.values(members).map(m => ({ name: m.displayName, label: m.displayName, photo: m.photoURL }))
+                ...Object.values(members).map(m => ({
+                    name: (m.displayName || '').split(' ')[0],
+                    label: m.displayName,
+                    photo: m.photoURL
+                }))
             ];
-            mentionList = allItems.filter(i => i.name?.toLowerCase().includes(q));
+            mentionList = allItems.filter(i => i.name && i.label?.toLowerCase().includes(q));
             if (!mentionList.length) { hideMentionDropdown(); return; }
             mentionIndex = 0;
             renderMentionItems();
@@ -2744,15 +3352,15 @@
         <div class="mention-avatar">
           ${item.isAI
                     ? '<i class="fa-solid fa-wand-magic-sparkles" style="color:#a78bfa;font-size:10px;"></i>'
-                    : item.photo
-                        ? `<img src="${esc(item.photo)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
-                        : `<span style="font-size:8px;">${getInitials(item.label)}</span>`}
+                    : safeUrl(item.photo)
+                        ? `<img src="${esc(safeUrl(item.photo))}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+                        : `<span style="font-size:8px;">${esc(getInitials(item.label))}</span>`}
         </div>
         <span style="color:var(--text);">${esc(item.label)}</span>
       </div>`).join('');
         }
 
-        window.selectMention = (idx) => {
+        function selectMention(idx) {
             const item = mentionList[idx];
             if (!item) return;
             const inp = document.getElementById('chat-input');
@@ -2763,7 +3371,8 @@
             inp.selectionStart = inp.selectionEnd = (before + `@${item.name} `).length;
             hideMentionDropdown();
             inp.focus();
-        };
+        }
+        window.selectMention = selectMention;
 
         function hideMentionDropdown() {
             document.getElementById('mention-dropdown').classList.remove('show');
@@ -2782,7 +3391,7 @@
             const snippet = '```js\n// code here\n```';
             inp.value = inp.value.slice(0, pos) + snippet + inp.value.slice(pos);
             inp.focus();
-            inp.selectionStart = inp.selectionEnd = pos + 7;
+            inp.selectionStart = inp.selectionEnd = pos + 6;
         };
 
         // ─────────────────────────────────────────────
@@ -2790,24 +3399,111 @@
         // ─────────────────────────────────────────────
         function initEditor() {
             editorInstance = CodeMirror(document.getElementById('editor-container'), {
-                value: '// Welcome to Learnkins Room\n',
+                value: '// Welcome to Learnkins Room\n// Open a file from the explorer — everyone in the room edits it live together.\n',
                 mode: 'javascript',
-                theme: 'dracula',
+                theme: document.documentElement.classList.contains('light') ? 'default' : 'dracula',
                 lineNumbers: true,
                 tabSize: 2,
                 indentWithTabs: false,
                 lineWrapping: false,
                 autoCloseBrackets: true,
                 matchBrackets: true,
+                readOnly: canEdit() ? false : 'nocursor',
                 extraKeys: {
                     'Ctrl-S': () => window.submitPR(),
-                    'Cmd-S': () => window.submitPR()
+                    'Cmd-S': () => window.submitPR(),
+                    'Ctrl-Enter': () => window.runEditorCode(),
+                    'Cmd-Enter': () => window.runEditorCode()
                 }
             });
 
-            // Track unsaved changes
-            editorInstance.on('change', () => { editorDirty = true; });
+            editorInstance.on('change', () => updateDirty());
         }
+
+        // ─────────────────────────────────────────────
+        //  LIVE COLLABORATION
+        // ─────────────────────────────────────────────
+        function setLiveStatus(state, label) {
+            const el = document.getElementById('live-status');
+            el.classList.toggle('live', state === 'live');
+            document.getElementById('live-label').textContent = label;
+            if (state !== 'live') document.getElementById('live-peers').innerHTML = '';
+        }
+
+        function renderLivePeers() {
+            if (!live) return;
+            const peers = live.peers();
+            const seen = new Set();
+            const unique = peers.filter(p => !seen.has(p.uid) && seen.add(p.uid));
+            document.getElementById('live-peers').innerHTML = unique.slice(0, 5).map(p => `
+                <span class="peer-chip" style="background:${esc(p.color)};" title="${esc(p.name)} is editing">
+                  ${esc(getInitials(p.name))}
+                </span>`).join('');
+            document.getElementById('live-label').textContent = unique.length
+                ? `live · ${unique.length + 1} editing` : 'live';
+        }
+
+        function closeLive() {
+            const old = live;
+            live = null;
+            setLiveStatus('off', 'offline');
+            if (old) return old.destroy();
+        }
+
+        // Swaps the editor onto the shared document for `file`. Calls are
+        // serialised so fast clicking between files can't interleave bindings.
+        function openLive(file) {
+            liveSwitch = liveSwitch.then(async () => {
+                await closeLive();
+                if (activeFileId !== file.id) return;
+                setLiveStatus('connecting', 'connecting…');
+                editorInstance.setOption('readOnly', 'nocursor');
+                const provider = new FirestoreYProvider(db, roomId, `file-${file.id}`, {
+                    uid: currentUser.uid,
+                    name: currentUser.displayName || currentUser.email || 'Someone',
+                    readOnly: !canEdit()
+                });
+                try {
+                    await provider.connect(file.content || '');
+                } catch (err) {
+                    await provider.destroy();
+                    setLiveStatus('off', 'offline');
+                    editorInstance.setValue(file.content || '');
+                    editorInstance.setOption('readOnly', canEdit() ? false : 'nocursor');
+                    showToast('Live sync unavailable: ' + err.message, 'error');
+                    return;
+                }
+                if (activeFileId !== file.id) { await provider.destroy(); return; }
+                live = provider;
+                provider.bind(editorInstance);
+                editorInstance.clearHistory();
+                editorInstance.setOption('readOnly', canEdit() ? false : 'nocursor');
+                provider.onChange(renderLivePeers);
+                setLiveStatus('live', 'live');
+                renderLivePeers();
+                updateDirty();
+            }).catch(err => console.error('openLive', err));
+            return liveSwitch;
+        }
+
+        function committedContent() {
+            return files.find(f => f.id === activeFileId)?.content ?? null;
+        }
+
+        function updateDirty() {
+            const committed = committedContent();
+            const current = editorInstance?.getValue() ?? '';
+            const dirty = activeFileId ? committed !== null && current !== committed : current.trim().length > 0;
+            document.getElementById('dirty-dot').style.display = dirty ? 'inline-block' : 'none';
+            document.getElementById('reset-btn').style.display = dirty && activeFileId && live && canEdit() ? 'flex' : 'none';
+        }
+
+        window.resetToCommitted = () => {
+            const committed = committedContent();
+            if (committed === null || !live) return;
+            if (!confirm('Discard the live changes for everyone and go back to the last saved version?')) return;
+            live.replaceText(committed);
+        };
 
         // ─────────────────────────────────────────────
         //  FILE EXPLORER
@@ -2835,19 +3531,20 @@
                                     f.fileName.endsWith('.json') ? 'fa-solid fa-brackets-curly' :
                                         'fa-solid fa-file-code';
                 const isActive = f.id === activeFileId;
+                const editors = Object.entries(presence)
+                    .filter(([uid, p]) => uid !== currentUser.uid && isOnline(uid) && p.file === f.fileName).length;
                 return `
-        <div onclick="window.openFile('${f.id}')"
+        <div class="file-item" onclick="window.openFile('${esc(f.id)}')"
              style="padding:5px 10px;border-radius:7px;cursor:pointer;font-size:12px;
                     display:flex;align-items:center;gap:8px;
                     background:${isActive ? 'var(--indigo3)' : 'transparent'};
                     color:${isActive ? 'var(--indigo2)' : 'var(--text)'};
-                    transition:background 0.15s ease;"
-             onmouseover="if('${f.id}'!=='${activeFileId}')this.style.background='var(--bg3)'"
-             onmouseout="if('${f.id}'!=='${activeFileId}')this.style.background='transparent'">
+                    transition:background 0.15s ease;">
           <i class="${icon}" style="font-size:11px;color:${isActive ? 'var(--indigo2)' : 'var(--muted2)'};flex-shrink:0;"></i>
           <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${esc(f.fileName)}</span>
+          ${editors ? `<span title="${editors} editing now" style="font-size:9px;color:#4ade80;">●${editors}</span>` : ''}
           ${myRole === 'admin' ? `
-            <button onclick="event.stopPropagation();window.deleteFile('${f.id}')"
+            <button onclick="event.stopPropagation();window.deleteFile('${esc(f.id)}')"
               style="opacity:0;width:16px;height:16px;border:none;background:transparent;
                      cursor:pointer;color:var(--muted2);font-size:10px;padding:0;"
               onmouseover="this.style.opacity='1';this.style.color='#f87171'"
@@ -2862,56 +3559,53 @@
         window.openFile = (id) => {
             const file = files.find(f => f.id === id);
             if (!file || !editorInstance) return;
+            if (id === activeFileId && live) { editorInstance.focus(); return; }
             activeFileId = id;
-            editorDirty = false;
-            editorInstance.setValue(file.content || '');
             editorInstance.setOption('mode', file.language || 'javascript');
             document.getElementById('file-name').value = file.fileName;
             document.getElementById('tab-code-name').textContent = file.fileName;
             document.getElementById('lang-select').value = file.language || 'javascript';
             renderFileList();
-            editorInstance.focus();
+            publishPresence();
+            return openLive(file).then(() => editorInstance.focus());
         };
 
-        window.newFile = () => {
-            const name = prompt('File name (e.g. utils.js, main.py):');
+        window.newFile = async () => {
+            if (!canEdit()) { showToast('Viewers cannot create files.', 'error'); return; }
+            const name = prompt('File name (e.g. utils.js, src/main.py):');
             if (!name?.trim()) return;
             const trimmed = name.trim();
+            if (files.some(f => f.fileName === trimmed)) { showToast('That file already exists.', 'error'); return; }
             const lang =
-                trimmed.endsWith('.py') ? 'python' :
-                    trimmed.endsWith('.html') ? 'xml' :
-                        trimmed.endsWith('.css') ? 'css' :
-                            trimmed.endsWith('.java') ? 'text/x-java' :
-                                trimmed.endsWith('.c') ? 'text/x-csrc' :
-                                    trimmed.endsWith('.cpp') ? 'text/x-c++src' : 'javascript';
+                /\.py$/.test(trimmed) ? 'python' :
+                    /\.html?$/.test(trimmed) ? 'xml' :
+                        /\.css$/.test(trimmed) ? 'css' :
+                            /\.java$/.test(trimmed) ? 'text/x-java' :
+                                /\.(c|h)$/.test(trimmed) ? 'text/x-csrc' :
+                                    /\.(cpp|cc|hpp)$/.test(trimmed) ? 'text/x-c++src' : 'javascript';
 
             activeFileId = null;
-            editorDirty = false;
-            editorInstance.setValue(`// ${trimmed}\n`);
+            await (liveSwitch = liveSwitch.then(closeLive));
+            const comment = lang === 'python' ? '#' : lang === 'xml' ? null : lang === 'css' ? null : '//';
+            editorInstance.setValue(comment ? `${comment} ${trimmed}\n` : '');
+            editorInstance.clearHistory();
             editorInstance.setOption('mode', lang);
+            editorInstance.setOption('readOnly', false);
             document.getElementById('file-name').value = trimmed;
             document.getElementById('tab-code-name').textContent = trimmed;
             document.getElementById('lang-select').value = lang;
+            setLiveStatus('off', 'local draft');
             renderFileList();
-            showToast(`New file: ${trimmed} — press Ctrl+S to submit PR.`, 'info');
+            updateDirty();
+            showToast(`New file: ${trimmed} — press Ctrl+S to save it for the team.`, 'info');
             editorInstance.focus();
         };
 
         window.deleteFile = async (id) => {
             if (!confirm('Delete this file? This cannot be undone.')) return;
             try {
-                const token = await getToken();
-                const res = await fetch(`/api/rooms/${roomId}/files/${id}`, {
-                    method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!res.ok) throw new Error((await res.json()).error);
-                if (activeFileId === id) {
-                    activeFileId = null;
-                    editorDirty = false;
-                    editorInstance.setValue('');
-                }
-                showToast('File deleted.', 'success');
-                // No need to call loadFiles() — subscribeFiles() handles it
+                const data = await api(`/api/rooms/${roomId}/files/${id}`, { method: 'DELETE' });
+                showToast(data.github?.status === 'pushed' ? 'File deleted (and removed on GitHub).' : 'File deleted.', 'success');
             } catch (err) { showToast(err.message, 'error'); }
         };
 
@@ -2930,37 +3624,107 @@
         };
 
         // ─────────────────────────────────────────────
+        //  RUN CODE
+        // ─────────────────────────────────────────────
+        function logRun(level, text) {
+            const log = document.getElementById('run-log');
+            const line = document.createElement('div');
+            line.className = `lvl-${level}`;
+            line.textContent = text;
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        window.clearRunOutput = () => { document.getElementById('run-log').innerHTML = ''; };
+        window.closeRunOutput = () => {
+            document.getElementById('run-output').classList.remove('open');
+            document.getElementById('run-preview').srcdoc = '';
+            editorInstance?.refresh();
+        };
+
+        let running = false;
+        window.runEditorCode = async () => {
+            if (running) return;
+            const code = editorInstance?.getValue() || '';
+            const fileName = document.getElementById('file-name').value;
+            const runtime = runtimeFor(document.getElementById('lang-select').value, fileName);
+            const panel = document.getElementById('run-output');
+            const log = document.getElementById('run-log');
+            const preview = document.getElementById('run-preview');
+            panel.classList.add('open');
+            editorInstance?.refresh();
+
+            if (runtime === 'html') {
+                document.getElementById('run-title').textContent = `Preview — ${fileName}`;
+                log.style.display = 'none';
+                preview.style.display = 'block';
+                preview.srcdoc = code;
+                return;
+            }
+            log.style.display = 'block';
+            preview.style.display = 'none';
+            document.getElementById('run-title').textContent = `Output — ${fileName}`;
+            if (!runtime) { logRun('error', 'Only JavaScript, Python and HTML can run in the browser.'); return; }
+
+            running = true;
+            log.innerHTML = '';
+            logRun('meta', `▶ ${runtime} · ${new Date().toLocaleTimeString()}`);
+            try {
+                const result = await runCode({
+                    code,
+                    runtime,
+                    onOutput: ({ level, text }) => logRun(level, text),
+                    onStatus: msg => logRun('meta', msg)
+                });
+                logRun('meta', result.ok ? `✓ finished in ${Math.round(result.ms)} ms` : '✗ finished with errors');
+            } finally {
+                running = false;
+            }
+        };
+
+        window.askAIAboutCode = () => {
+            const selection = editorInstance?.getSelection();
+            const code = selection || editorInstance?.getValue() || '';
+            if (!code.trim()) { showToast('Nothing to ask about yet.', 'info'); return; }
+            const fileName = document.getElementById('file-name').value;
+            aiPendingContext = `File: ${fileName}\n\`\`\`\n${code.slice(0, 20000)}\n\`\`\``;
+            if (!panelState.ai) window.togglePanel('ai');
+            const inp = document.getElementById('ai-input');
+            inp.value = selection ? 'Explain this code and point out any bugs.' : `Review ${fileName}: bugs, edge cases and improvements.`;
+            inp.focus();
+            showToast(`AI will see ${selection ? 'your selection' : fileName} with your next question.`, 'info');
+        };
+
+        // ─────────────────────────────────────────────
         //  PULL REQUESTS
         // ─────────────────────────────────────────────
         window.submitPR = async () => {
+            if (!canEdit()) { showToast('Viewers cannot save changes.', 'error'); return; }
             const code = editorInstance?.getValue() || '';
-            const fileName = document.getElementById('file-name').value || 'untitled.js';
+            const fileName = document.getElementById('file-name').value.trim() || 'untitled.js';
             const language = document.getElementById('lang-select').value || 'javascript';
             if (!code.trim()) { showToast('Editor is empty.', 'error'); return; }
+            if (activeFileId && code === committedContent() && fileName === files.find(f => f.id === activeFileId)?.fileName) {
+                showToast('No changes to save.', 'info');
+                return;
+            }
 
             try {
-                const token = await getToken();
-                const url = activeFileId
+                const data = await api(activeFileId
                     ? `/api/rooms/${roomId}/files/${activeFileId}`
-                    : `/api/rooms/${roomId}/files`;
-
-                const res = await fetch(url, {
+                    : `/api/rooms/${roomId}/files`, {
                     method: activeFileId ? 'PATCH' : 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ fileName, language, content: code })
+                    body: { fileName, language, content: code }
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error);
 
-                editorDirty = false;
-                showToast(
-                    myRole === 'admin'
-                        ? 'Saved directly (admin).'
-                        : 'PR submitted — waiting for admin approval.',
-                    'success'
-                );
-                // No need to call loadPRs() — subscribePRs() handles it
-            } catch (err) { showToast('PR failed: ' + err.message, 'error'); }
+                if (data.autoMerged) {
+                    const gh = data.github?.status;
+                    showToast(gh === 'pushed' ? 'Saved & pushed to GitHub.' : gh === 'failed' ? 'Saved — GitHub push failed (see chat).' : 'Saved.', gh === 'failed' ? 'error' : 'success');
+                    if (!activeFileId && data.fileId) pendingOpenFileId = data.fileId;
+                } else {
+                    showToast('PR submitted — waiting for admin approval.', 'success');
+                }
+            } catch (err) { showToast('Save failed: ' + err.message, 'error'); }
         };
 
         window.togglePR = () => {
@@ -2985,50 +3749,191 @@
                 return;
             }
 
-            list.innerHTML = prList.map(pr => `
-      <div class="pr-item">
+            list.innerHTML = prList.map(pr => {
+                const commit = safeUrl(pr.github?.commitUrl);
+                const ghBadge = pr.github?.status === 'pushed'
+                    ? `<a href="${esc(commit)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="View commit on GitHub" style="color:var(--muted);font-size:10px;"><i class="fa-brands fa-github"></i> ${esc((pr.github.sha || '').slice(0, 7))}</a>`
+                    : pr.github?.status === 'failed'
+                        ? `<span title="${esc(pr.github.error)}" style="color:#f87171;font-size:10px;"><i class="fa-brands fa-github"></i> failed</span>`
+                        : '';
+                return `
+      <div class="pr-item" onclick="window.openDiff('${esc(pr.id)}')">
         <div class="pr-item-title">
           <i class="fa-solid fa-${pr.type === 'create' ? 'plus' : 'pen'} mr-1"
              style="color:var(--muted2);font-size:10px;"></i>
-          ${esc(pr.fileName)}
-          <span style="font-size:10px;color:var(--muted2);margin-left:4px;">(${pr.type})</span>
+          ${esc(pr.newFileName ? `${pr.fileName} → ${pr.newFileName}` : pr.fileName)}
+          <span style="font-size:10px;color:var(--muted2);margin-left:4px;">(${esc(pr.type)}${pr.autoMerged ? ', direct' : ''})</span>
         </div>
         <div class="pr-item-meta mb-2">
           by ${esc(pr.name)} · ${pr.createdAt?.toDate
-                    ? pr.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                    : '—'
-                }
+                        ? pr.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : '—'
+                    }
         </div>
         <div class="flex items-center justify-between gap-2">
-          <span class="pr-status ${pr.status}">${pr.status}</span>
+          <span class="flex items-center gap-2">
+            <span class="pr-status ${esc(pr.status)}">${esc(pr.status)}</span>
+            ${ghBadge}
+          </span>
           ${myRole === 'admin' && pr.status === 'pending' ? `
             <div class="flex gap-2">
-              <button onclick="window.reviewPR('${pr.id}','approve')"
+              <button onclick="event.stopPropagation();window.reviewPR('${esc(pr.id)}','approve')"
                 class="icon-btn" style="color:#34d399;border-color:rgba(16,185,129,0.2);" title="Approve">
                 <i class="fa-solid fa-check"></i>
               </button>
-              <button onclick="window.reviewPR('${pr.id}','reject')"
+              <button onclick="event.stopPropagation();window.reviewPR('${esc(pr.id)}','reject')"
                 class="icon-btn danger" title="Reject">
                 <i class="fa-solid fa-xmark"></i>
               </button>
-            </div>` : ''}
+            </div>` : `<span style="font-size:10px;color:var(--muted2);"><i class="fa-solid fa-code-compare"></i> diff</span>`}
         </div>
-      </div>`).join('');
+      </div>`;
+            }).join('');
         }
 
         window.reviewPR = async (id, action) => {
             try {
-                const token = await getToken();
-                const res = await fetch(`/api/rooms/${roomId}/prs/${id}/review`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ action })
-                });
-                if (!res.ok) throw new Error((await res.json()).error);
-                showToast(`PR ${action}d.`, action === 'approve' ? 'success' : 'error');
-                // No manual reload needed — subscribePRs() + subscribeFiles() handle updates
+                const data = await api(`/api/rooms/${roomId}/prs/${id}/review`, { method: 'POST', body: { action } });
+                const gh = data.github?.status;
+                showToast(
+                    action === 'approve'
+                        ? (gh === 'pushed' ? 'PR merged & pushed to GitHub.' : gh === 'failed' ? 'PR merged — GitHub push failed (see chat).' : 'PR merged.')
+                        : 'PR rejected.',
+                    action === 'approve' && gh !== 'failed' ? 'success' : 'error');
+                if (diffPR?.id === id) closeModal('diff-modal');
             } catch (err) { showToast(err.message, 'error'); }
         };
+
+        // ─────────────────────────────────────────────
+        //  PR DIFF + AI REVIEW
+        // ─────────────────────────────────────────────
+        function prBase(pr) {
+            if (pr.type === 'create') return '';
+            if (pr.previousContent !== undefined) return pr.previousContent;
+            return files.find(f => f.id === pr.fileId)?.content || '';
+        }
+
+        window.openDiff = (id) => {
+            const pr = prList.find(p => p.id === id);
+            if (!pr) return;
+            diffPR = pr;
+            const ops = diffLines(prBase(pr), pr.content || '');
+            const { added, removed } = diffStats(ops);
+
+            document.getElementById('diff-title').textContent =
+                pr.newFileName ? `${pr.fileName} → ${pr.newFileName}` : pr.fileName;
+            document.getElementById('diff-meta').innerHTML =
+                `${esc(pr.type)} by ${esc(pr.name)} · <span style="color:#4ade80;">+${added}</span> <span style="color:#f87171;">−${removed}</span> · <span class="pr-status ${esc(pr.status)}">${esc(pr.status)}</span>`;
+
+            // Collapse long unchanged stretches.
+            const rows = [];
+            const keep = ops.map(() => false);
+            ops.forEach((op, i) => {
+                if (op.type === 'same') return;
+                for (let j = Math.max(0, i - 3); j <= Math.min(ops.length - 1, i + 3); j++) keep[j] = true;
+            });
+            let gap = 0;
+            ops.forEach((op, i) => {
+                if (!keep[i] && ops.length > 40) { gap++; return; }
+                if (gap) { rows.push(`<div class="diff-line gap">··· ${gap} unchanged line${gap > 1 ? 's' : ''} ···</div>`); gap = 0; }
+                const sign = op.type === 'add' ? '+' : op.type === 'del' ? '−' : ' ';
+                rows.push(`<div class="diff-line ${op.type}"><span class="no">${op.oldNo ?? ''}</span><span class="no">${op.newNo ?? ''}</span><span class="tx">${sign} ${esc(op.text)}</span></div>`);
+            });
+            if (gap) rows.push(`<div class="diff-line gap">··· ${gap} unchanged line${gap > 1 ? 's' : ''} ···</div>`);
+            document.getElementById('diff-body').innerHTML = rows.join('') ||
+                '<div style="padding:16px;color:var(--muted);font-size:12px;">No changes.</div>';
+            document.getElementById('ai-review').innerHTML = '';
+
+            const actions = [`<button class="btn-ghost-sm" onclick="window.aiReviewPR()" id="btn-ai-review">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1" style="color:#a78bfa;"></i>AI review</button>`];
+            if (myRole === 'admin' && pr.status === 'pending') {
+                actions.push(`<div style="flex:1;"></div>
+                <button class="btn-danger" style="width:auto;padding:8px 16px;" onclick="window.reviewPR('${esc(pr.id)}','reject')"><i class="fa-solid fa-xmark"></i> Reject</button>
+                <button class="btn-primary" style="width:auto;padding:8px 16px;" onclick="window.reviewPR('${esc(pr.id)}','approve')"><i class="fa-solid fa-check"></i> Approve & merge</button>`);
+            }
+            document.getElementById('diff-actions').innerHTML = actions.join('');
+            openModal('diff-modal');
+        };
+
+        window.aiReviewPR = () => withBusy('btn-ai-review', async () => {
+            const pr = diffPR;
+            if (!pr) return;
+            const out = document.getElementById('ai-review');
+            out.innerHTML = '<span style="color:var(--muted);">Reviewing…</span>';
+            try {
+                const diff = unifiedDiff(diffLines(prBase(pr), pr.content || ''));
+                const data = await api('/api/ai/snippet-verdict', {
+                    method: 'POST',
+                    body: { diff: diff || '(no changes)', fileName: pr.newFileName || pr.fileName, language: pr.language }
+                });
+                out.innerHTML = sanitize(data.verdictHtml);
+            } catch (err) {
+                out.innerHTML = `<span style="color:#f87171;">${esc(err.message)}</span>`;
+            }
+        });
+
+        // ─────────────────────────────────────────────
+        //  VOICE
+        // ─────────────────────────────────────────────
+        function renderVoice(state) {
+            voiceState = state;
+            const fresh = state.participants;
+            document.getElementById('voice-count').textContent = fresh.length ? `${fresh.length} in call` : '';
+            const joinBtn = document.getElementById('voice-join-btn');
+            joinBtn.classList.toggle('danger-on', state.joined);
+            joinBtn.title = state.joined ? 'Leave voice' : 'Join voice';
+            joinBtn.querySelector('i').className = `fa-solid ${state.joined ? 'fa-phone-slash' : 'fa-phone'} mr-1`;
+            document.getElementById('voice-join-label').textContent = state.joined ? 'Leave' : 'Join';
+
+            const muteBtn = document.getElementById('voice-mute-btn');
+            const deafBtn = document.getElementById('voice-deafen-btn');
+            muteBtn.style.display = deafBtn.style.display = state.joined ? 'flex' : 'none';
+            muteBtn.classList.toggle('danger-on', state.muted);
+            muteBtn.querySelector('i').className = `fa-solid ${state.muted ? 'fa-microphone-slash' : 'fa-microphone'}`;
+            deafBtn.classList.toggle('danger-on', state.deafened);
+
+            document.getElementById('voice-list').innerHTML = fresh.map(p => {
+                const status = p.connection === 'self' || p.connection === 'connected' ? ''
+                    : state.joined ? `<span style="font-size:9px;color:var(--muted2);">${esc(p.connection)}</span>` : '';
+                return `
+                <div class="voice-person ${p.speaking ? 'speaking' : ''}">
+                  <div class="msg-avatar">${avatarInner(p.photo, p.name)}</div>
+                  <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.name)}</span>
+                  ${status}
+                  ${p.muted ? '<i class="fa-solid fa-microphone-slash" style="font-size:10px;color:#f87171;"></i>' : ''}
+                </div>`;
+            }).join('');
+        }
+
+        window.toggleVoice = async () => {
+            if (!voice) return;
+            const btn = document.getElementById('voice-join-btn');
+            btn.disabled = true;
+            try {
+                if (voiceState.joined) {
+                    await voice.leave();
+                } else {
+                    try {
+                        voice.iceServers = (await api('/api/rtc-config')).iceServers;
+                    } catch { /* fall back to public STUN */ }
+                    await voice.join();
+                    showToast('Joined voice. Ctrl+Shift+M to mute.', 'success');
+                }
+            } catch (err) {
+                showToast(err.name === 'NotAllowedError' ? 'Microphone permission denied.' : 'Voice error: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        };
+        window.toggleMute = () => voice?.toggleMute();
+        window.toggleDeafen = () => voice?.toggleDeafen();
+
+        document.addEventListener('keydown', e => {
+            if (e.key.toLowerCase() === 'm' && e.shiftKey && (e.ctrlKey || e.metaKey) && voiceState.joined) {
+                e.preventDefault();
+                voice.toggleMute();
+            }
+        });
 
         // ─────────────────────────────────────────────
         //  AI PANEL  (personal, streaming)
@@ -3042,8 +3947,9 @@
             inp.style.height = 'auto';
             document.getElementById('ai-send-btn').disabled = true;
 
-            appendAIMsg('user', text);
-            aiHistory.push({ role: 'user', text });
+            const context = aiPendingContext;
+            aiPendingContext = null;
+            appendAIMsg('user', context ? `${text}\n\n📎 code attached` : text);
 
             const bubbleId = 'ai-bubble-' + Date.now();
             appendAIStreamBubble(bubbleId);
@@ -3055,12 +3961,19 @@
                 const res = await fetch('/api/ai/private/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ prompt: text, history: aiHistory.slice(-10) })
+                    body: JSON.stringify({ prompt: text, history: aiHistory.slice(-10), context })
                 });
+                if (!res.ok) {
+                    let msg = `Request failed (${res.status})`;
+                    try { msg = (await res.json()).error || msg; } catch { }
+                    throw new Error(msg);
+                }
+                aiHistory.push({ role: 'user', text: context ? `${text}\n\n${context}` : text });
 
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
+                let streamError = null;
 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -3071,20 +3984,20 @@
 
                     for (const line of lines) {
                         if (!line.startsWith('data: ')) continue;
-                        try {
-                            const data = JSON.parse(line.slice(6));
-                            if (data.error) throw new Error(data.error);
-                            if (data.chunk) {
-                                fullText += data.chunk;
-                                updateAIStreamBubble(bubbleId, fullText);
-                            }
-                            if (data.done) {
-                                finalizeAIBubble(bubbleId, data.html || marked.parse(fullText));
-                                aiHistory.push({ role: 'ai', text: fullText });
-                            }
-                        } catch { }
+                        let data;
+                        try { data = JSON.parse(line.slice(6)); } catch { continue; }
+                        if (data.error) { streamError = data.error; continue; }
+                        if (data.chunk) {
+                            fullText += data.chunk;
+                            updateAIStreamBubble(bubbleId, fullText);
+                        }
+                        if (data.done) {
+                            finalizeAIBubble(bubbleId, data.html || marked.parse(fullText));
+                            aiHistory.push({ role: 'ai', text: fullText });
+                        }
                     }
                 }
+                if (streamError) throw new Error(streamError);
             } catch (err) {
                 finalizeAIBubble(bubbleId, `<p style="color:#f87171;">Error: ${esc(err.message)}</p>`);
             } finally {
@@ -3100,14 +4013,10 @@
             div.innerHTML = `
       <div class="ai-avatar ${isUser ? 'user' : 'ai-bot'}">
         ${isUser
-                    ? (currentUser?.photoURL
-                        ? `<img src="${esc(currentUser.photoURL)}"
-                    style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
-                    onerror="this.parentElement.textContent='${getInitials(currentUser?.displayName || '')}';">`
-                        : getInitials(currentUser?.displayName || ''))
+                    ? avatarInner(currentUser?.photoURL, currentUser?.displayName || '')
                     : '<i class="fa-solid fa-wand-magic-sparkles"></i>'}
       </div>
-      <div class="ai-bubble">${esc(text)}</div>`;
+      <div class="ai-bubble" style="white-space:pre-wrap;">${esc(text)}</div>`;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
@@ -3128,20 +4037,21 @@
         function updateAIStreamBubble(id, text) {
             const bubble = document.getElementById(id);
             if (!bubble) return;
-            bubble.innerHTML = marked.parse(text) + '<span class="stream-cursor">▋</span>';
+            bubble.innerHTML = sanitize(marked.parse(text)) + '<span class="stream-cursor">▋</span>';
             document.getElementById('ai-messages').scrollTop = 99999;
         }
 
         function finalizeAIBubble(id, html) {
             const bubble = document.getElementById(id);
             if (!bubble) return;
-            bubble.innerHTML = html;
+            bubble.innerHTML = sanitize(html);
             bubble.querySelectorAll('pre code').forEach(b => hljs.highlightElement(b));
             document.getElementById('ai-messages').scrollTop = 99999;
         }
 
         window.clearAIChat = () => {
             aiHistory = [];
+            aiPendingContext = null;
             document.getElementById('ai-messages').innerHTML = `
       <div class="ai-msg ai">
         <div class="ai-avatar ai-bot"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
@@ -3154,21 +4064,34 @@
         };
 
         // ─────────────────────────────────────────────
-        //  SIGN OUT
+        //  TEARDOWN / SIGN OUT
         // ─────────────────────────────────────────────
+        function teardown() {
+            [unsubMessages, unsubTyping, unsubFiles, unsubPRs, unsubRoom, unsubPresence].forEach(u => u && u());
+            unsubMessages = unsubTyping = unsubFiles = unsubPRs = unsubRoom = unsubPresence = null;
+            clearInterval(presenceTimer);
+            voice?.destroy();
+            closeLive();
+        }
+
+        window.addEventListener('pagehide', () => {
+            if (!roomId || !currentUser) return;
+            stopTyping();
+            deleteDoc(presenceRef()).catch(() => { });
+            live?.flush();
+        });
+
         window.doSignOut = async () => {
-            if (unsubMessages) unsubMessages();
-            if (unsubTyping) unsubTyping();
-            if (unsubFiles) unsubFiles();
-            if (unsubPRs) unsubPRs();
-            const token = await getToken();
-            await fetch(`/api/rooms/${roomId}/typing`, {
-                method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
-            });
+            stopTyping();
+            await deleteDoc(presenceRef()).catch(() => { });
+            teardown();
             await fbSignOut(auth);
             window.location.href = '/auth/';
         };
 
+        // ─────────────────────────────────────────────
+        //  ATTACHMENTS
+        // ─────────────────────────────────────────────
         window.handleFileAttach = async (e) => {
             const file = e.target.files[0];
             e.target.value = '';
@@ -3187,21 +4110,17 @@
             showToast('Uploading...', 'info');
 
             try {
-                const token = await getToken();
-                const res = await fetch(`/api/rooms/${roomId}/upload`, {
+                const { uploadUrl, uploadHeaders, publicUrl, filePath } = await api(`/api/rooms/${roomId}/upload`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ fileName: file.name, contentType: file.type })
+                    body: { fileName: file.name, contentType: file.type }
                 });
-                const { uploadUrl, publicUrl, filePath } = await res.json();
-                if (!res.ok) throw new Error('Failed to get upload URL');
 
                 const upload = await fetch(uploadUrl, {
                     method: 'PUT',
-                    headers: { 'Content-Type': file.type },
+                    headers: { 'Content-Type': file.type, ...(uploadHeaders || {}) },
                     body: file
                 });
-                if (!upload.ok) throw new Error('Upload failed');
+                if (!upload.ok) throw new Error(`Upload failed (${upload.status})`);
 
                 // Store pending — don't send yet
                 pendingAttachment = { type, url: publicUrl, name: file.name, filePath };
@@ -3214,7 +4133,7 @@
             }
         };
 
-        function showAttachmentPreview({ type, url, name }) {
+        function showAttachmentPreview({ type, name }) {
             let existing = document.getElementById('attachment-preview-bar');
             if (existing) existing.remove();
 
@@ -3246,7 +4165,6 @@
             document.getElementById('attachment-preview-bar')?.remove();
         };
 
-
         // ─────────────────────────────────────────────
         //  INIT ROOM
         // ─────────────────────────────────────────────
@@ -3260,28 +4178,19 @@
             setLoaderMsg('Loading room...');
 
             try {
-                const token = await getToken();
-                const res = await fetch(`/api/rooms/${roomId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!res.ok) { window.location.href = '/lobby/'; return; }
-
-                currentRoom = await res.json();
-                members = currentRoom.members || {};
-                myRole = members[user.uid]?.role || 'member';
-
-                document.getElementById('sidebar-room-name').textContent = currentRoom.name;
-                document.getElementById('sidebar-code').textContent = currentRoom.inviteCode;
-                document.getElementById('topbar-room').textContent = currentRoom.name;
-                document.title = `${currentRoom.name} — Learnkins Room`;
-
-                if (myRole === 'admin') {
-                    document.getElementById('admin-actions').style.cssText = 'display:flex;';
+                let room;
+                try {
+                    room = await api(`/api/rooms/${roomId}`);
+                } catch {
+                    window.location.href = '/lobby/';
+                    return;
                 }
 
-                renderMembers();
+                initEditor();
+                applyRoom(room);
                 setLoaderMsg('Connecting...');
 
+                subscribeRoom();
                 subscribeMessages();
                 const msgContainer = document.getElementById('messages');
                 msgContainer.addEventListener('scroll', () => {
@@ -3293,13 +4202,25 @@
                 subscribeTyping();
                 subscribeFiles();
                 subscribePRs();
+                subscribePresence();
 
-                // Init editor (no loadFiles call inside — subscribeFiles handles it)
-                initEditor();
+                voice = new VoiceRoom({
+                    db, roomId,
+                    user: { uid: user.uid, name: user.displayName || user.email || 'Someone', photo: user.photoURL || '' },
+                    onChange: renderVoice,
+                    onError: err => console.warn('voice:', err.message)
+                });
+                voice.watch();
+                renderVoice(voice.state);
+
                 applyPanels();
 
                 document.getElementById('app').style.display = 'flex';
                 hideLoader();
+
+                if ('Notification' in window && Notification.permission === 'default') {
+                    document.addEventListener('click', () => Notification.requestPermission().catch(() => { }), { once: true });
+                }
 
             } catch (err) {
                 showToast('Failed to load room: ' + err.message, 'error');
@@ -3312,6 +4233,7 @@
         // ─────────────────────────────────────────────
         onAuthStateChanged(auth, (user) => {
             if (!user) { window.location.href = '/auth/'; return; }
+            if (currentUser?.uid === user.uid) return; // token refresh, not a new sign-in
             initRoom(user);
         });
 

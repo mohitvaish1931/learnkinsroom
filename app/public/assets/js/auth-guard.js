@@ -1,4 +1,4 @@
-import { auth } from './firebase-client.js';
+import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 export function requireAuth(callback) {

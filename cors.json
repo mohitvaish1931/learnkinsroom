@@ -1,0 +1,8 @@
+[
+  {
+    "origin": ["https://yourdomain.com", "http://localhost:6969"],
+    "method": ["GET", "PUT"],
+    "responseHeader": ["Content-Type", "x-goog-meta-firebasestoragedownloadtokens"],
+    "maxAgeSeconds": 3600
+  }
+]
