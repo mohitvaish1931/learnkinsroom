@@ -859,6 +859,11 @@
             font-size: 11px;
         }
 
+        /* Tailwind's reset strips list markers; AI answers rely on them. */
+        .ai-bubble ul, .msg-text ul, #ai-review ul { list-style: disc; padding-left: 20px; margin: 4px 0 8px; }
+        .ai-bubble ol, .msg-text ol { list-style: decimal; padding-left: 22px; margin: 4px 0 8px; }
+        .ai-bubble li, .msg-text li { margin: 2px 0; }
+
         .ai-bubble p {
             margin-bottom: 6px;
         }
@@ -1560,8 +1565,10 @@
         }
 
         /* ── Touch devices: no hover, so keep message actions reachable ── */
+        /* Touch devices have no hover: tap a message to reveal its actions. */
         @media (hover: none) {
-            .msg-actions { opacity: .75; }
+            .msg-actions { opacity: 0; pointer-events: none; }
+            .msg.show-actions .msg-actions { opacity: 1; pointer-events: auto; }
             .file-item button { opacity: .7 !important; }
         }
 
@@ -1781,7 +1788,6 @@
             overflow: auto;
         }
 
-        #ai-review ul { padding-left: 18px; list-style: disc; }
 
         .field-label {
             font-size: 10px;
@@ -2451,6 +2457,7 @@
 
         // Only http(s) URLs may end up in src/href attributes.
         function safeUrl(url) {
+            if (!url || typeof url !== 'string') return '';
             try {
                 const u = new URL(url, location.origin);
                 return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : '';
@@ -4476,6 +4483,15 @@
                 subscribeRoom();
                 subscribeMessages();
                 const msgContainer = document.getElementById('messages');
+                // Touch devices: tapping a message toggles its action buttons.
+                msgContainer.addEventListener('click', e => {
+                    if (!window.matchMedia('(hover: none)').matches) return;
+                    if (e.target.closest('button, a, textarea, video')) return;
+                    const msg = e.target.closest('.msg');
+                    const wasOpen = msg?.classList.contains('show-actions');
+                    msgContainer.querySelectorAll('.msg.show-actions').forEach(m => m.classList.remove('show-actions'));
+                    if (msg && !wasOpen) msg.classList.add('show-actions');
+                });
                 msgContainer.addEventListener('scroll', () => {
                     if (msgContainer.scrollTop < 80) {
                         loadOlderMessages();
