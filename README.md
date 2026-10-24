@@ -8,6 +8,7 @@ Learnkins Room is a real-time collaborative coding platform built for developer 
 
 ## Table of Contents
 
+- [Highlights](#highlights)
 - [How It Works](#how-it-works)
 - [Architecture](#architecture)
 - [File Structure](#file-structure)
@@ -25,13 +26,28 @@ Learnkins Room is a real-time collaborative coding platform built for developer 
 
 ---
 
+## Highlights
+
+| Feature | How it works |
+|---|---|
+| **Live team coding** | Every file is a [Yjs](https://yjs.dev) CRDT synced through Firestore. Everyone in the room types into the same document at once, with coloured remote cursors and names, conflict-free merging and per-user undo. "Save" turns the live version into a PR (admins merge directly). |
+| **Voice rooms + screen share** | One-click voice chat in every room: a WebRTC mesh with Firestore signalling, mute / deafen, speaking indicators, `Ctrl+Shift+M`, and screen sharing (tuned for crisp code) shown in a floating stage. Add a TURN server for strict networks. |
+| **Two-way GitHub sync** | Connect a repo + token in Room Settings. Every merged PR (and admin save, rename or delete) becomes a real commit on your branch via the Git Data API, and the commit link is posted to chat. "Push all files now" syncs the whole room in one commit; "Import from GitHub" pulls a repo's text files into the room (open editors update live). |
+| **PR diffs + AI review** | Click any PR to see a line diff; one click asks Gemini to review the change before you approve. |
+| **Run code** | Run JavaScript (Web Worker, with a time limit) and Python (Pyodide) in the browser, or preview HTML in a sandboxed iframe. |
+| **Presence** | See who's online and which file each person has open. Desktop notifications when you're @mentioned. |
+| **AI with context** | `@ai` in chat sees the recent conversation; "Ask AI about this code" sends the open file or selection to your private assistant. Per-user rate limits protect your Gemini quota. |
+| **Works on phones** | Off-canvas sidebar and one-panel-at-a-time layout below 768px. |
+
+---
+
 ## How It Works
 
 A user signs in with Google OAuth. They land on the Lobby where they can create a new room or join one using a 6-character invite code. Once inside a room, they have three panels available — Chat, Code Editor, and Personal AI — all resizable and collapsible.
 
 Everything in the chat is real-time via Firestore `onSnapshot` listeners. Messages are written directly to Firestore from the client. The server handles auth verification, room management, AI calls, and the pull request workflow.
 
-The code editor lets members write and save files. Any file creation or edit by a non-admin is submitted as a Pull Request. Admins review and approve or reject PRs from a side panel. On approval, the file is committed into the room's file collection in Firestore.
+The code editor is live: opening a file joins its shared Yjs document (`rooms/{id}/collab/file-{fileId}`), so everyone sees each other's keystrokes and cursors immediately. Saving submits the current live version as a Pull Request; admins' saves merge straight away. On merge the file is committed into the room's file collection in Firestore and, when GitHub sync is enabled, pushed to the connected repository.
 
 The AI assistant works in two modes — group mode via `@ai` in chat, and private mode in the Personal AI panel with full streaming via Server-Sent Events.
 
@@ -42,13 +58,16 @@ The AI assistant works in two modes — group mode via `@ai` in chat, and privat
 ```
 Browser (HTML + Tailwind + Firebase JS SDK)
         |
-        |--- Firestore (onSnapshot) -----> real-time messages, typing, file tree
+        |--- Firestore (onSnapshot) -----> real-time messages, typing, file tree, presence
+        |--- Firestore + Yjs ------------> live collaborative editing (CRDT updates)
+        |--- Firestore + WebRTC ---------> voice chat (signalling via Firestore, audio peer-to-peer)
         |
         |--- REST API (Express) ---------> auth, rooms, members, files, PRs, AI
                 |
                 |--- Firebase Admin SDK --> token verification, Firestore writes
                 |--- Google Gemini API ---> AI responses (stream + non-stream)
                 |--- marked.js -----------> markdown to HTML (server-side)
+                |--- GitHub REST API -----> commits for merged PRs
 ```
 
 The client never calls Gemini directly. All AI requests go through the Express server, which holds the API key securely in `.env`. The server also parses AI markdown responses into HTML before sending to the client, so the frontend just renders it.
@@ -65,29 +84,34 @@ Everything else — room creation, joining, member management, file operations, 
 ## File Structure
 
 ```
-/                               server root (on host)
-├── index.js                    Express server — all API routes, AI, Firebase Admin
-├── service-account.json        Firebase Admin credentials (never commit this)
-├── package.json
-├── yarn.lock
-├── .env                        all secrets and config
-├── .htaccess                   Apache/Nginx rewrite rules if applicable
-├── node_modules/
-└── public/                     static frontend files served by Express
-    ├── index.html              landing page
-    ├── auth/
-    │   └── index.html          Google OAuth sign-in page
-    ├── lobby/
-    │   └── index.html          room list, create room, join room
-    └── chat/
-        └── index.html          main room workspace (chat + editor + AI)
+/
+├── app/
+│   ├── index.js                Express server — API routes, AI, Firebase Admin, GitHub sync
+│   ├── lib/
+│   │   ├── github.js           GitHub client (single-commit pushes via the Git Data API)
+│   │   └── utils.js            shared helpers (errors, escaping, file-name validation)
+│   ├── client-src/             sources for the browser vendor bundle (npm run build:vendor)
+│   └── public/                 static frontend served by Express
+│       ├── index.html          landing page
+│       ├── auth/ lobby/ chat/  pages
+│       └── assets/
+│           ├── js/collab.js    Yjs ⇄ Firestore provider (live editing)
+│           ├── js/voice.js     WebRTC voice mesh with Firestore signalling
+│           ├── js/runner.js    in-browser JS / Python runner
+│           ├── js/diff.js      line diff for PR review
+│           └── vendor/         prebuilt Yjs + y-codemirror + DOMPurify bundle
+├── test/                       node:test suites (npm test)
+├── firestore.rules             Firestore security rules (deploy these!)
+├── storage.rules               Storage security rules
+├── cors.json                   bucket CORS for browser uploads
+└── vercel.json
 ```
 
 Notable points about this structure:
-- The entire backend lives in a single `index.js` file at the root
+- The backend lives in `app/index.js`, with GitHub and helper code in `app/lib/`
 - `public/` is served statically by Express via `express.static`
 - `service-account.json` sits at root alongside `index.js` — it is required by Firebase Admin and must be gitignored
-- There is no build step — all frontend files are plain HTML with CDN-loaded libraries
+- There is no build step for deploys — the only bundled code (Yjs etc.) is committed in `assets/vendor/`; rebuild it with `npm run build:vendor` after upgrading those packages
 
 ---
 
@@ -332,7 +356,19 @@ FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY=
 
 GEMINI_API_KEY=
+GEMINI_MODEL=gemini-2.5-flash        # optional
+AI_RATE_LIMIT=30                     # optional — AI requests per user per 5 minutes
 
+# Optional — encrypts per-room GitHub tokens at rest (AES-256-GCM)
+SECRETS_KEY=
+
+# GitHub sync — optional server-wide fallback token (rooms can set their own)
+GITHUB_TOKEN=
+
+# Voice — optional TURN server for users behind strict NATs
+TURN_URL=turn:turn.example.com:3478
+TURN_USERNAME=
+TURN_CREDENTIAL=
 
 MAIL_HOST=mail.yourdomain.com
 MAIL_PORT=587
@@ -348,36 +384,33 @@ MAIL_FROM=Learnkins Room <noreply@yourdomain.com>
 
 ## Roadmap
 
-**Next**
-- Voice rooms via Agora SDK
-- Video calls
-- Screen sharing
-- Live collaborative code editing (real-time cursor sync)
-- Viewer role fully enforced on chat input
+**Shipped**
+- Live collaborative code editing with remote cursors (Yjs)
+- Voice rooms (WebRTC)
+- Automatic GitHub push for merged PRs
+- PR diff view and AI review
+- Online presence and @mention notifications
+- In-browser code runner (JS, Python, HTML preview)
+- Screen sharing, GitHub import, mobile layout
 
-**Planned**
-- AI automatic code review when a PR is submitted
-- AI reads the currently open file for context-aware answers
-- File diff view when reviewing a PR
-- Message reactions
-- Message search
-- Room activity feed (join, PR events, role changes)
-- Notification system for @mentions and PR reviews
+**Next**
+- Video calls
+- Open real GitHub pull requests instead of pushing directly
+- Message reactions and search
 
 **Future**
-- GitHub repo sync
 - Public discoverable rooms
 - Room templates with pre-loaded code scaffolds
 - Export chat as markdown
-- Mobile layout
 
 ---
 
 ## Known Limitations
 
-- No live collaborative editing — if two people edit the same file simultaneously, last save wins
-- File tree is flat — no folder/directory structure
-- Messages are limited to the last 100 in a session
-- Viewer role is not yet enforced on the chat input in the UI
-- AI conversation history is session-only — clears on page refresh
-- No message pagination UI — older messages require a page reload with a `before` cursor
+- Requires Node.js 22+ on the server.
+- AI rate limits are kept in memory per server instance, so on serverless hosts they are approximate.
+- Voice uses a peer-to-peer mesh — great for small teams (up to ~6–8 people), not for large calls. Without a TURN server some corporate networks can't connect.
+- New files are a local draft until their first save; after that they are live for everyone.
+- File tree is flat in the UI (paths like `src/app.js` are allowed and pushed to the right folder on GitHub).
+- AI conversation history in the private panel is session-only — clears on page refresh.
+- GitHub sync pushes straight to the configured branch; use a dedicated branch if your main branch is protected.

@@ -1,20 +1,32 @@
 {
-  "name": "stackroom-local",
-  "version": "1.0.0",
+  "name": "learnkins-room",
+  "version": "1.2.0",
   "private": true,
-  "description": "StackRoom local compatibility setup",
+  "description": "Real-time collaborative coding rooms with chat, AI, voice and GitHub sync",
   "main": "app/index.js",
   "scripts": {
     "start": "node app/index.js",
-    "dev": "node app/index.js"
+    "dev": "node app/index.js",
+    "build:vendor": "esbuild app/client-src/vendor.js --bundle --format=esm --minify --target=es2020 --alias:codemirror=./app/client-src/codemirror-global.js --outfile=app/public/assets/vendor/collab.bundle.js",
+    "test": "node --test \"test/*.test.*\""
   },
   "dependencies": {
     "@google/genai": "^1.14.0",
     "cors": "^2.8.0",
     "dotenv": "^16.4.2",
     "express": "^4.21.2",
-    "firebase-admin": "^13.0.0",
+    "firebase-admin": "^14.5.0",
     "marked": "^15.0.0",
-    "nodemailer": "^7.0.0"
+    "nodemailer": "^10.2.1",
+    "yjs": "^13.6.33"
+  },
+  "devDependencies": {
+    "dompurify": "^3.4.17",
+    "esbuild": "^0.28.2",
+    "y-codemirror": "^3.0.1",
+    "y-protocols": "^1.0.7"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

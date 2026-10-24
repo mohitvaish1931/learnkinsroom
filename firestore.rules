@@ -1,0 +1,97 @@
+rules_version = '2';
+
+// Learnkins Room — Firestore security rules.
+// The server (Admin SDK) bypasses these; they only govern browser clients.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function roomData(roomId) { return get(/databases/$(database)/documents/rooms/$(roomId)).data; }
+    function isMember(roomId) { return signedIn() && request.auth.uid in roomData(roomId).members; }
+    function canEdit(roomId) {
+      return isMember(roomId) && roomData(roomId).members[request.auth.uid].role in ['admin', 'member'];
+    }
+
+    // Profiles — private to their owner (the server reads emails for PR mail).
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // GitHub tokens etc. — server only.
+    match /roomSecrets/{roomId} {
+      allow read, write: if false;
+    }
+
+    match /rooms/{roomId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.members;
+      allow write: if false; // created/updated via the API
+
+      // Chat — members post as themselves; AI and system messages come from the server.
+      match /messages/{msgId} {
+        allow read: if isMember(roomId);
+        allow create: if isMember(roomId)
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'displayName', 'photoURL', 'text', 'createdAt', 'deleted', 'edited', 'replyTo', 'attachment'])
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 10000;
+        allow update: if signedIn()
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'edited'])
+          && request.resource.data.text.size() <= 10000;
+        allow delete: if false; // soft delete via the API
+      }
+
+      match /typing/{uid} {
+        allow read: if isMember(roomId);
+        allow write: if isMember(roomId) && request.auth.uid == uid;
+      }
+
+      // Who is online and which file they have open.
+      match /presence/{uid} {
+        allow read: if isMember(roomId);
+        allow write: if isMember(roomId) && request.auth.uid == uid;
+      }
+
+      // Committed files, PRs and legacy editor state are written by the server only.
+      match /files/{fileId} {
+        allow read: if isMember(roomId);
+        allow write: if false;
+      }
+      match /prs/{prId} {
+        allow read: if isMember(roomId);
+        allow write: if false;
+      }
+      match /editor/{doc} {
+        allow read: if isMember(roomId);
+        allow write: if false;
+      }
+
+      // Live collaborative editing (Yjs over Firestore).
+      match /collab/{docKey} {
+        allow read: if isMember(roomId);
+        allow create, update: if canEdit(roomId);
+        allow delete: if false;
+
+        match /updates/{updateId} {
+          allow read: if isMember(roomId);
+          allow create: if canEdit(roomId) && request.resource.data.by == request.auth.uid;
+          allow delete: if canEdit(roomId); // compaction
+        }
+        match /awareness/{uid} {
+          allow read: if isMember(roomId);
+          allow write: if isMember(roomId) && request.auth.uid == uid;
+        }
+      }
+
+      // Voice chat: participants and WebRTC signalling.
+      match /voice/{uid} {
+        allow read: if isMember(roomId);
+        allow write: if isMember(roomId) && request.auth.uid == uid;
+      }
+      match /voiceSignals/{signalId} {
+        allow create: if isMember(roomId) && request.resource.data.from == request.auth.uid;
+        allow read, delete: if signedIn() && resource.data.to == request.auth.uid;
+      }
+    }
+  }
+}

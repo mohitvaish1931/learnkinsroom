@@ -1,4 +1,4 @@
-import { auth } from './firebase-client.js';
+import { auth } from './firebase-config.js';
 
 // Get Firebase ID token for API calls
 export async function getToken() {
