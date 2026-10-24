@@ -31,12 +31,13 @@ Learnkins Room is a real-time collaborative coding platform built for developer 
 | Feature | How it works |
 |---|---|
 | **Live team coding** | Every file is a [Yjs](https://yjs.dev) CRDT synced through Firestore. Everyone in the room types into the same document at once, with coloured remote cursors and names, conflict-free merging and per-user undo. "Save" turns the live version into a PR (admins merge directly). |
-| **Voice rooms** | One-click voice chat in every room: a WebRTC audio mesh with Firestore signalling, mute / deafen, speaking indicators and `Ctrl+Shift+M`. Add a TURN server for strict networks. |
-| **Automatic GitHub push** | Connect a repo + token in Room Settings. Every merged PR (and admin save, rename or delete) becomes a real commit on your branch via the Git Data API, and the commit link is posted to chat. "Push all files now" syncs the whole room in one commit. |
+| **Voice rooms + screen share** | One-click voice chat in every room: a WebRTC mesh with Firestore signalling, mute / deafen, speaking indicators, `Ctrl+Shift+M`, and screen sharing (tuned for crisp code) shown in a floating stage. Add a TURN server for strict networks. |
+| **Two-way GitHub sync** | Connect a repo + token in Room Settings. Every merged PR (and admin save, rename or delete) becomes a real commit on your branch via the Git Data API, and the commit link is posted to chat. "Push all files now" syncs the whole room in one commit; "Import from GitHub" pulls a repo's text files into the room (open editors update live). |
 | **PR diffs + AI review** | Click any PR to see a line diff; one click asks Gemini to review the change before you approve. |
 | **Run code** | Run JavaScript (Web Worker, with a time limit) and Python (Pyodide) in the browser, or preview HTML in a sandboxed iframe. |
 | **Presence** | See who's online and which file each person has open. Desktop notifications when you're @mentioned. |
-| **AI with context** | `@ai` in chat sees the recent conversation; "Ask AI about this code" sends the open file or selection to your private assistant. |
+| **AI with context** | `@ai` in chat sees the recent conversation; "Ask AI about this code" sends the open file or selection to your private assistant. Per-user rate limits protect your Gemini quota. |
+| **Works on phones** | Off-canvas sidebar and one-panel-at-a-time layout below 768px. |
 
 ---
 
@@ -356,6 +357,10 @@ FIREBASE_PRIVATE_KEY=
 
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash        # optional
+AI_RATE_LIMIT=30                     # optional — AI requests per user per 5 minutes
+
+# Optional — encrypts per-room GitHub tokens at rest (AES-256-GCM)
+SECRETS_KEY=
 
 # GitHub sync — optional server-wide fallback token (rooms can set their own)
 GITHUB_TOKEN=
@@ -386,10 +391,10 @@ MAIL_FROM=Learnkins Room <noreply@yourdomain.com>
 - PR diff view and AI review
 - Online presence and @mention notifications
 - In-browser code runner (JS, Python, HTML preview)
+- Screen sharing, GitHub import, mobile layout
 
 **Next**
-- Video calls and screen sharing
-- Import an existing GitHub repo into a room
+- Video calls
 - Open real GitHub pull requests instead of pushing directly
 - Message reactions and search
 
@@ -397,12 +402,13 @@ MAIL_FROM=Learnkins Room <noreply@yourdomain.com>
 - Public discoverable rooms
 - Room templates with pre-loaded code scaffolds
 - Export chat as markdown
-- Mobile layout
 
 ---
 
 ## Known Limitations
 
+- Requires Node.js 22+ on the server.
+- AI rate limits are kept in memory per server instance, so on serverless hosts they are approximate.
 - Voice uses a peer-to-peer mesh — great for small teams (up to ~6–8 people), not for large calls. Without a TURN server some corporate networks can't connect.
 - New files are a local draft until their first save; after that they are live for everyone.
 - File tree is flat in the UI (paths like `src/app.js` are allowed and pushed to the right folder on GitHub).

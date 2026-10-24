@@ -9,12 +9,18 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const admin = require('firebase-admin');
+const { initializeApp, getApps, cert } = require('firebase-admin/app');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
+const { getStorage } = require('firebase-admin/storage');
 const { GoogleGenAI } = require('@google/genai');
 const { marked } = require('marked');
 const nodemailer = require('nodemailer');
 const github = require('./lib/github');
 const { HttpError, escapeHtml, sanitizeFileName, normalizeRoomFileName, languageForFile, handle } = require('./lib/utils');
+const { createRateLimiter } = require('./lib/ratelimit');
+const { encryptSecret, decryptSecret } = require('./lib/secrets');
+const { replaceLiveText } = require('./lib/collab-server');
 
 const mailEnabled = Boolean(process.env.MAIL_HOST && process.env.MAIL_USER);
 const mailer = mailEnabled
@@ -82,6 +88,18 @@ function createLocalRoom({ name, description, githubRepo, createdBy }) {
   return room;
 }
 
+// Behind Vercel / nginx: trust the proxy so req.ip and req.protocol are the client's.
+app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Permissions-Policy', 'microphone=(self), display-capture=(self), camera=(self), geolocation=()');
+  next();
+});
+
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -148,16 +166,16 @@ function getFirebaseCertConfig() {
   return null;
 }
 
-if (!admin.apps.length) {
+if (!getApps().length) {
   try {
     const firebaseCert = getFirebaseCertConfig();
     if (firebaseCert) {
-      admin.initializeApp({
-        credential: admin.credential.cert(firebaseCert),
+      initializeApp({
+        credential: cert(firebaseCert),
         storageBucket: process.env.FIREBASE_STORAGE_BUCKET || `${firebaseCert.project_id}.appspot.com`
       });
-      db = admin.firestore();
-      bucket = admin.storage().bucket();
+      db = getFirestore();
+      bucket = getStorage().bucket();
       firebaseReady = true;
     }
   } catch (err) {
@@ -170,6 +188,17 @@ if (!firebaseReady) {
 }
 
 const AI_ROUTES = ['/ai/chat', '/ai/private/stream', '/ai/private', '/ai/snippet-verdict'];
+
+// Per-user limits; tune with AI_RATE_LIMIT (requests per 5 minutes).
+const aiLimiter = createRateLimiter({ limit: Number(process.env.AI_RATE_LIMIT) || 30, windowMs: 5 * 60 * 1000 });
+const githubLimiter = createRateLimiter({ limit: 10, windowMs: 10 * 60 * 1000 });
+const MAX_PROMPT = 8000;
+
+function clampPrompt(prompt) {
+  if (typeof prompt !== 'string') return prompt;
+  if (prompt.length > MAX_PROMPT) throw new HttpError(413, `Prompt too long (max ${MAX_PROMPT} characters)`);
+  return prompt;
+}
 
 app.use('/api', (req, res, next) => {
   if (req.path === '/config' || req.path === '/health') return next();
@@ -191,7 +220,7 @@ const verifyToken = async (req, res, next) => {
   }
   if (!firebaseReady) return res.status(503).json({ error: 'Firebase is not configured on the server' });
   try {
-    req.user = await admin.auth().verifyIdToken(token);
+    req.user = await getAuth().verifyIdToken(token);
     next();
   } catch {
     res.status(401).json({ error: 'Unauthorized — invalid token' });
@@ -242,7 +271,7 @@ async function postSystemMessage(roomId, text, extra = {}) {
     isSystem: true,
     deleted: false,
     edited: false,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
     ...extra
   });
 }
@@ -319,7 +348,7 @@ function appUrlFor(req) {
 async function getGithubConfig(roomId, roomData) {
   const repo = github.parseRepo(roomData.githubRepo);
   const secretSnap = await db.collection('roomSecrets').doc(roomId).get();
-  const roomToken = secretSnap.exists ? secretSnap.data().githubToken : null;
+  const roomToken = secretSnap.exists ? decryptSecret(secretSnap.data().githubToken) : null;
   const token = roomToken || process.env.GITHUB_TOKEN || null;
   return {
     repo,
@@ -374,7 +403,7 @@ async function applyPR(roomRef, pr) {
       language: pr.language || languageForFile(pr.fileName),
       content: pr.content || '',
       createdBy: pr.uid,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      createdAt: FieldValue.serverTimestamp()
     });
     return { fileId: fileRef.id, files: [{ fileName: pr.fileName, content: pr.content || '' }], deletions: [] };
   }
@@ -395,7 +424,7 @@ async function applyPR(roomRef, pr) {
     content: pr.content || '',
     language: pr.language || fileSnap.data().language || languageForFile(newName),
     lastEditBy: pr.uid,
-    lastEditAt: admin.firestore.FieldValue.serverTimestamp()
+    lastEditAt: FieldValue.serverTimestamp()
   });
   return {
     fileId: pr.fileId,
@@ -422,7 +451,7 @@ async function mergePR({ roomId, roomRef, roomData, prRef, reviewer }) {
     tx.update(prRef, {
       status: 'approved',
       reviewedBy: reviewer.uid,
-      reviewedAt: admin.firestore.FieldValue.serverTimestamp()
+      reviewedAt: FieldValue.serverTimestamp()
     });
     return snap.data();
   });
@@ -431,7 +460,7 @@ async function mergePR({ roomId, roomRef, roomData, prRef, reviewer }) {
   try {
     applied = await applyPR(roomRef, pr);
   } catch (err) {
-    await prRef.update({ status: 'pending', reviewedBy: admin.firestore.FieldValue.delete(), reviewedAt: admin.firestore.FieldValue.delete() });
+    await prRef.update({ status: 'pending', reviewedBy: FieldValue.delete(), reviewedAt: FieldValue.delete() });
     throw err;
   }
 
@@ -502,7 +531,7 @@ app.post('/api/auth/profile', verifyToken, handle(async (req, res) => {
     displayName: displayName || req.user.name || '',
     photoURL: photoURL || req.user.picture || '',
     email: req.user.email || email || '',
-    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    updatedAt: FieldValue.serverTimestamp()
   }, { merge: true });
   res.json({ success: true });
 }));
@@ -535,20 +564,20 @@ app.post('/api/rooms/create', verifyToken, handle(async (req, res) => {
     githubAutoPush: false,
     inviteCode,
     createdBy: req.user.uid,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    createdAt: FieldValue.serverTimestamp(),
     members: {
       [req.user.uid]: {
         role: 'admin',
         displayName: displayNameOf(req.user),
         photoURL: req.user.picture || '',
-        joinedAt: admin.firestore.FieldValue.serverTimestamp()
+        joinedAt: FieldValue.serverTimestamp()
       }
     }
   });
 
   await db.collection('users').doc(req.user.uid).set({
     uid: req.user.uid,
-    rooms: admin.firestore.FieldValue.arrayUnion(roomRef.id)
+    rooms: FieldValue.arrayUnion(roomRef.id)
   }, { merge: true });
 
   res.json({ roomId: roomRef.id, inviteCode });
@@ -591,12 +620,12 @@ app.post('/api/rooms/join', verifyToken, handle(async (req, res) => {
       role: 'member',
       displayName: displayNameOf(req.user),
       photoURL: req.user.picture || '',
-      joinedAt: admin.firestore.FieldValue.serverTimestamp()
+      joinedAt: FieldValue.serverTimestamp()
     }
   });
 
   await db.collection('users').doc(req.user.uid).set({
-    rooms: admin.firestore.FieldValue.arrayUnion(roomDoc.id)
+    rooms: FieldValue.arrayUnion(roomDoc.id)
   }, { merge: true });
 
   await postSystemMessage(roomDoc.id, `${displayNameOf(req.user)} joined the room`).catch(() => { });
@@ -622,7 +651,7 @@ app.get('/api/rooms', verifyToken, handle(async (req, res) => {
       email: req.user.email || '',
       photoURL: req.user.picture || '',
       rooms: [],
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      createdAt: FieldValue.serverTimestamp()
     });
     return res.json([]);
   }
@@ -681,13 +710,13 @@ app.patch('/api/rooms/:roomId', verifyToken, handle(async (req, res) => {
     ...(githubBranch !== undefined && { githubBranch: githubBranch || 'main' }),
     ...(githubBasePath !== undefined && { githubBasePath: String(githubBasePath).replace(/^\/+|\/+$/g, '') }),
     ...(githubAutoPush !== undefined && { githubAutoPush: Boolean(githubAutoPush) }),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    updatedAt: FieldValue.serverTimestamp()
   });
 
   // Write-only: an empty string clears the token, undefined leaves it alone.
   if (githubToken !== undefined) {
     const secretRef = db.collection('roomSecrets').doc(req.params.roomId);
-    if (githubToken) await secretRef.set({ githubToken: String(githubToken).trim(), updatedBy: req.user.uid }, { merge: true });
+    if (githubToken) await secretRef.set({ githubToken: encryptSecret(String(githubToken).trim()), updatedBy: req.user.uid }, { merge: true });
     else await secretRef.delete();
   }
   res.json({ success: true });
@@ -705,7 +734,7 @@ app.delete('/api/rooms/:roomId', verifyToken, handle(async (req, res) => {
   const { ref, data } = await loadRoom(req.params.roomId, req.user.uid, ['admin']);
   await Promise.all(Object.keys(data.members || {}).map(uid =>
     db.collection('users').doc(uid).set({
-      rooms: admin.firestore.FieldValue.arrayRemove(req.params.roomId)
+      rooms: FieldValue.arrayRemove(req.params.roomId)
     }, { merge: true })
   ));
   await db.collection('roomSecrets').doc(req.params.roomId).delete();
@@ -739,9 +768,9 @@ app.delete('/api/rooms/:roomId/members/:uid', verifyToken, needsDb, handle(async
   if (target.role === 'admin' && admins <= 1 && Object.keys(data.members).length > 1) {
     return res.status(400).json({ error: 'Promote another admin before the last admin leaves' });
   }
-  await ref.update({ [`members.${req.params.uid}`]: admin.firestore.FieldValue.delete() });
+  await ref.update({ [`members.${req.params.uid}`]: FieldValue.delete() });
   await db.collection('users').doc(req.params.uid).set({
-    rooms: admin.firestore.FieldValue.arrayRemove(req.params.roomId)
+    rooms: FieldValue.arrayRemove(req.params.roomId)
   }, { merge: true });
   await ref.collection('voice').doc(req.params.uid).delete().catch(() => { });
   await postSystemMessage(req.params.roomId, isSelf
@@ -782,7 +811,7 @@ app.delete('/api/rooms/:roomId/messages/:msgId', verifyToken, needsDb, handle(as
   if (!snap.exists) return res.status(404).json({ error: 'Message not found' });
   if (role !== 'admin' && snap.data().uid !== req.user.uid) return res.status(403).json({ error: 'Not allowed' });
 
-  await msgRef.update({ deleted: true, text: '', textHtml: '', attachment: admin.firestore.FieldValue.delete() });
+  await msgRef.update({ deleted: true, text: '', textHtml: '', attachment: FieldValue.delete() });
   res.json({ success: true });
 }));
 
@@ -791,7 +820,7 @@ app.post('/api/rooms/:roomId/typing', verifyToken, needsDb, handle(async (req, r
   const { ref } = await loadRoom(req.params.roomId, req.user.uid);
   await ref.collection('typing').doc(req.user.uid).set({
     name: displayNameOf(req.user),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    updatedAt: FieldValue.serverTimestamp()
   });
   res.json({ success: true });
 }));
@@ -817,7 +846,7 @@ app.patch('/api/rooms/:roomId/editor', verifyToken, needsDb, handle(async (req, 
     language: language || 'javascript',
     fileName: fileName || 'untitled.js',
     lastEditedBy: req.user.uid,
-    lastEditedAt: admin.firestore.FieldValue.serverTimestamp()
+    lastEditedAt: FieldValue.serverTimestamp()
   }, { merge: true });
   res.json({ success: true });
 }));
@@ -843,25 +872,37 @@ async function submitPR(req, res, prFields) {
     name: displayNameOf(req.user),
     photo: req.user.picture || '',
     status: 'pending',
-    createdAt: admin.firestore.FieldValue.serverTimestamp()
+    createdAt: FieldValue.serverTimestamp()
   });
 
   if (room.role === 'admin') {
-    const merged = await mergePR({ roomId, roomRef: room.ref, roomData: room.data, prRef, reviewer: req.user });
+    let merged;
+    try {
+      merged = await mergePR({ roomId, roomRef: room.ref, roomData: room.data, prRef, reviewer: req.user });
+    } catch (err) {
+      // The admin sees the error directly; don't leave a dangling pending PR behind.
+      await prRef.delete().catch(() => { });
+      throw err;
+    }
     await prRef.update({ autoMerged: true });
     return res.json({ prId: prRef.id, status: 'approved', autoMerged: true, ...merged });
   }
 
-  res.json({ prId: prRef.id, status: 'pending' });
+  // Serverless hosts may freeze the function once the response is sent, so the
+  // email goes out first — capped so a slow SMTP server can't stall the request.
+  await Promise.race([
+    notifyAdmins({
+      roomData: room.data,
+      roomId,
+      submitterName: displayNameOf(req.user),
+      fileName: prFields.newFileName || prFields.fileName,
+      type: prFields.type,
+      appUrl: appUrlFor(req)
+    }).catch(err => console.error('PR email failed:', err.message)),
+    new Promise(resolve => setTimeout(resolve, 5000))
+  ]);
 
-  notifyAdmins({
-    roomData: room.data,
-    roomId,
-    submitterName: displayNameOf(req.user),
-    fileName: prFields.newFileName || prFields.fileName,
-    type: prFields.type,
-    appUrl: appUrlFor(req)
-  }).catch(err => console.error('PR email failed:', err.message));
+  res.json({ prId: prRef.id, status: 'pending' });
 }
 
 // Create file → PR
@@ -948,7 +989,7 @@ app.post('/api/rooms/:roomId/prs/:prId/review', verifyToken, needsDb, handle(asy
       status: 'rejected',
       reviewedBy: req.user.uid,
       reviewNote: String(req.body.note || '').slice(0, 500),
-      reviewedAt: admin.firestore.FieldValue.serverTimestamp()
+      reviewedAt: FieldValue.serverTimestamp()
     });
     return res.json({ success: true, status: 'rejected' });
   }
@@ -971,7 +1012,7 @@ app.get('/api/rooms/:roomId/github', verifyToken, needsDb, handle(async (req, re
   });
 }));
 
-app.post('/api/rooms/:roomId/github/test', verifyToken, needsDb, handle(async (req, res) => {
+app.post('/api/rooms/:roomId/github/test', verifyToken, needsDb, githubLimiter.middleware('github'), handle(async (req, res) => {
   const { data } = await loadRoom(req.params.roomId, req.user.uid, ['admin']);
   const cfg = await getGithubConfig(req.params.roomId, data);
   if (!cfg.repo) throw new HttpError(400, 'Set a GitHub repository first');
@@ -986,7 +1027,7 @@ app.post('/api/rooms/:roomId/github/test', verifyToken, needsDb, handle(async (r
 }));
 
 // Pushes every room file to the repo in one commit, regardless of auto-push.
-app.post('/api/rooms/:roomId/github/push', verifyToken, needsDb, handle(async (req, res) => {
+app.post('/api/rooms/:roomId/github/push', verifyToken, needsDb, githubLimiter.middleware('github'), handle(async (req, res) => {
   const { ref, data } = await loadRoom(req.params.roomId, req.user.uid, ['admin']);
   const cfg = await getGithubConfig(req.params.roomId, data);
   if (!cfg.repo) throw new HttpError(400, 'Set a GitHub repository first');
@@ -1006,6 +1047,75 @@ app.post('/api/rooms/:roomId/github/push', verifyToken, needsDb, handle(async (r
   });
   if (result.status === 'failed') throw new HttpError(502, result.error);
   res.json(result);
+}));
+
+// Pulls the repo's text files into the room. Existing files are only replaced
+// when `overwrite` is set; open editors receive the new content live.
+app.post('/api/rooms/:roomId/github/import', verifyToken, needsDb, githubLimiter.middleware('github'), handle(async (req, res) => {
+  const { ref, data } = await loadRoom(req.params.roomId, req.user.uid, ['admin']);
+  const cfg = await getGithubConfig(req.params.roomId, data);
+  if (!cfg.repo) throw new HttpError(400, 'Set a GitHub repository first');
+  if (!cfg.token) throw new HttpError(400, 'Add a GitHub token first');
+  const overwrite = req.body.overwrite === true;
+
+  let listing;
+  try {
+    listing = await github.listRepoFiles({
+      token: cfg.token, owner: cfg.repo.owner, repo: cfg.repo.repo, branch: cfg.branch, basePath: cfg.basePath
+    });
+  } catch (err) {
+    throw new HttpError(err.status && err.status < 500 ? 400 : 502, `GitHub: ${err.message}`);
+  }
+
+  const filesCol = ref.collection('files');
+  const existing = new Map((await filesCol.get()).docs.map(d => [d.data().fileName, d]));
+  const writes = [];
+  const liveUpdates = [];
+  const counts = { created: 0, updated: 0, unchanged: 0, skippedExisting: 0, invalid: 0 };
+  const now = FieldValue.serverTimestamp();
+
+  for (const file of listing.files) {
+    let fileName;
+    try { fileName = normalizeRoomFileName(file.relPath); } catch { counts.invalid++; continue; }
+    const current = existing.get(fileName);
+    if (!current) {
+      writes.push(batch => batch.set(filesCol.doc(), {
+        fileName, language: languageForFile(fileName), content: file.content,
+        createdBy: req.user.uid, createdAt: now, importedFrom: listing.commitSha
+      }));
+      counts.created++;
+    } else if (current.data().content === file.content) {
+      counts.unchanged++;
+    } else if (!overwrite) {
+      counts.skippedExisting++;
+    } else {
+      writes.push(batch => batch.update(current.ref, {
+        content: file.content, lastEditBy: req.user.uid, lastEditAt: now, importedFrom: listing.commitSha
+      }));
+      liveUpdates.push({ fileId: current.id, content: file.content });
+      counts.updated++;
+    }
+  }
+
+  for (let i = 0; i < writes.length; i += 400) {
+    const batch = db.batch();
+    writes.slice(i, i + 400).forEach(w => w(batch));
+    await batch.commit();
+  }
+  await Promise.all(liveUpdates.map(u =>
+    replaceLiveText(ref.collection('collab').doc(`file-${u.fileId}`), u.content, () => FieldValue.serverTimestamp())
+      .catch(err => console.warn('live update after import failed:', err.message))));
+
+  const skippedTotal = Object.values(listing.skipped).reduce((a, b) => a + b, 0);
+  await postSystemMessage(req.params.roomId,
+    `${displayNameOf(req.user)} imported from GitHub \`${cfg.repo.owner}/${cfg.repo.repo}@${cfg.branch}\` (\`${listing.commitSha.slice(0, 7)}\`): ` +
+    `${counts.created} new, ${counts.updated} updated` +
+    (counts.skippedExisting ? `, ${counts.skippedExisting} existing kept` : '') +
+    (skippedTotal ? `, ${skippedTotal} skipped (binary/large/ignored)` : ''),
+    { github: { commitUrl: `https://github.com/${cfg.repo.owner}/${cfg.repo.repo}/commit/${listing.commitSha}`, sha: listing.commitSha } }
+  ).catch(() => { });
+
+  res.json({ commitSha: listing.commitSha, ...counts, skipped: listing.skipped, truncated: listing.truncated });
 }));
 
 // ── INVITES ───────────────────────────────────────
@@ -1048,8 +1158,9 @@ async function fetchAttachmentInline(attachment) {
   return { mimeType: fileRes.headers.get('content-type') || fallback, data: buffer.toString('base64') };
 }
 
-app.post('/api/ai/chat', verifyToken, needsAI, handle(async (req, res) => {
-  const { prompt, context, attachment, roomId, replyTo } = req.body;
+app.post('/api/ai/chat', verifyToken, needsAI, aiLimiter.middleware('ai'), handle(async (req, res) => {
+  const { context, attachment, roomId, replyTo } = req.body;
+  const prompt = clampPrompt(req.body.prompt);
   if (!prompt && !attachment) return res.status(400).json({ error: 'Prompt required' });
 
   let room = null;
@@ -1096,7 +1207,7 @@ app.post('/api/ai/chat', verifyToken, needsAI, handle(async (req, res) => {
       text: raw,
       textHtml: html,
       isAI: true,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
       deleted: false,
       edited: false,
       ...(replyTo?.id && {
@@ -1120,15 +1231,18 @@ function toGeminiHistory(history) {
     .filter(msg => msg && typeof msg.text === 'string')
     .map(msg => ({
       role: msg.role === 'ai' ? 'model' : 'user',
-      parts: [{ text: msg.text }]
+      parts: [{ text: msg.text.slice(0, 24000) }]
     }));
 }
 
 const PRIVATE_SYSTEM = 'You are an expert coding assistant. Help with code generation, debugging, explanations, and code review. Always format code blocks with proper markdown (```language ... ```).';
 
-app.post('/api/ai/private/stream', verifyToken, needsAI, async (req, res) => {
+app.post('/api/ai/private/stream', verifyToken, needsAI, aiLimiter.middleware('ai'), async (req, res) => {
   const { prompt, history, context } = req.body;
   if (!prompt) return res.status(400).json({ error: 'Prompt required' });
+  if (typeof prompt !== 'string' || prompt.length > MAX_PROMPT) {
+    return res.status(413).json({ error: `Prompt too long (max ${MAX_PROMPT} characters)` });
+  }
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -1168,8 +1282,9 @@ app.post('/api/ai/private/stream', verifyToken, needsAI, async (req, res) => {
   }
 });
 
-app.post('/api/ai/private', verifyToken, needsAI, handle(async (req, res) => {
-  const { prompt, history } = req.body;
+app.post('/api/ai/private', verifyToken, needsAI, aiLimiter.middleware('ai'), handle(async (req, res) => {
+  const { history } = req.body;
+  const prompt = clampPrompt(req.body.prompt);
   if (!prompt) return res.status(400).json({ error: 'Prompt required' });
 
   const contents = toGeminiHistory(history);
@@ -1186,7 +1301,7 @@ app.post('/api/ai/private', verifyToken, needsAI, handle(async (req, res) => {
 }));
 
 // Short review of a snippet, or of a PR when `diff` is given.
-app.post('/api/ai/snippet-verdict', verifyToken, needsAI, handle(async (req, res) => {
+app.post('/api/ai/snippet-verdict', verifyToken, needsAI, aiLimiter.middleware('ai'), handle(async (req, res) => {
   const { code, language, diff, fileName } = req.body;
   if (!code && !diff) return res.status(400).json({ error: 'Code required' });
 

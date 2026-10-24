@@ -819,7 +819,7 @@
       if (photoURL) {
         sessionStorage.setItem('userPhoto', photoURL);
         const img   = new Image();
-        img.onload  = () => { avatarEl.innerHTML = `<img src="${photoURL}" alt="avatar"/>`; };
+        img.onload  = () => { img.alt = 'avatar'; avatarEl.replaceChildren(img); };
         img.onerror = () => {
           sessionStorage.removeItem('userPhoto');
           avatarEl.textContent = getInitials(user.displayName || user.email);

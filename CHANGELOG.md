@@ -4,6 +4,29 @@ All notable changes to Learnkins Room are documented here.
 
 ---
 
+## [1.2.0] — 2026-10-24
+
+### Added
+- **Screen sharing** in voice rooms — shown on a floating, expandable stage; tuned for sharp text; new participants receive an ongoing share automatically.
+- **Import from GitHub** — pull a repo's text files (optionally from a sub-folder) into the room; skips binaries, dependency folders and oversized files; can overwrite existing files, in which case open editors update live through a server-side Yjs update.
+- **Mobile layout** — off-canvas sidebar, one panel at a time, touch-friendly message actions, no iOS input zoom.
+- **Leave room** option for members (click your own name).
+- Per-user **rate limiting** for AI (`AI_RATE_LIMIT`) and GitHub endpoints, prompt size limits.
+- Optional **encryption at rest** for GitHub tokens (`SECRETS_KEY`, AES-256-GCM).
+- Security headers (`nosniff`, `SAMEORIGIN` framing, referrer and permissions policies); `trust proxy` so links and IPs are right behind Vercel/nginx.
+- GitHub Actions CI: tests on Node 22 and 24, plus a check that the committed vendor bundle matches its sources.
+
+### Changed
+- Upgraded to `firebase-admin` 14 (modular API) and `nodemailer` 10 — `npm audit` now reports 0 vulnerabilities. **Node.js 22+ is required.**
+
+### Fixed
+- Editing a message that contained a code block filled the editor with rendered text (including the "Copy" label) instead of the original markdown; replies quoted the same rendered text.
+- PR notification emails could be dropped on serverless hosts because they were sent after the response.
+- A failed admin save left a dangling pending PR.
+- Code-block "Copy" button text wrapped letter by letter; lobby avatar URL was injected into HTML unescaped.
+
+---
+
 ## [1.1.0] — 2026-10-23
 
 ### Added

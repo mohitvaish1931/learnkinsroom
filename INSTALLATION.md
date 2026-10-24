@@ -31,7 +31,8 @@ Tested on Ubuntu 22.04 LTS.
 
 ## System Requirements
 
-- Ubuntu 20.04 or 22.04 LTS (or any Debian-based distro)
+- Ubuntu 22.04 or 24.04 LTS (or any Debian-based distro)
+- **Node.js 22 or newer** (required by `firebase-admin` 14). On Vercel, set the project's Node.js version to 22.x or later.
 - At least 1 GB RAM
 - At least 10 GB disk
 - A non-root user with sudo access (recommended)
@@ -64,17 +65,17 @@ If you are on a cloud provider (AWS, DigitalOcean, Hetzner, etc.), also open por
 
 ## Step 2 — Install Node.js
 
-Use NodeSource to install Node.js v20 (LTS).
+Use NodeSource to install Node.js v22 (LTS).
 
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 ```
 
 Verify.
 
 ```bash
-node -v    # should print v20.x.x
+node -v    # should print v22.x.x (or newer)
 npm -v     # should print 10.x.x
 ```
 
@@ -533,11 +534,17 @@ sudo nginx -t && sudo systemctl reload nginx
   scoped to that repository with **Contents: Read and write**
 
 Click **Test connection**, tick **Auto-push**, and save. Tokens are stored in the server-only `roomSecrets`
-collection and are never sent back to browsers. Alternatively set `GITHUB_TOKEN` in `.env` as a server-wide default.
+collection and are never sent back to browsers. Set `SECRETS_KEY` in `.env` (any long random string, e.g.
+`openssl rand -base64 32`) to encrypt them at rest with AES-256-GCM; keep that key safe — tokens saved with it
+can't be read without it. Alternatively set `GITHUB_TOKEN` in `.env` as a server-wide default.
+
+**Import from GitHub** (same modal) copies the repo's text files into the room — up to 150 files / 3 MB, skipping
+binaries and folders such as `node_modules` and `dist`. Existing room files are kept unless you tick
+*overwrite existing files*; open editors then update live.
 
 **Voice.** Works out of the box with public STUN servers. Users on restrictive networks need a TURN server —
 set `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` in `.env` (any coturn instance or hosted TURN provider works).
-Browsers only allow microphone access on `https://` origins (or `localhost`).
+Browsers only allow microphone and screen-share access on `https://` origins (or `localhost`).
 
 ---
 

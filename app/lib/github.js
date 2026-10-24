@@ -192,4 +192,63 @@ async function commitFiles({ token, owner, repo, branch = 'main', files = [], de
   throw new GitHubError('Branch kept moving while pushing — try again', 409);
 }
 
-module.exports = { parseRepo, buildRepoPath, testAccess, commitFiles, GitHubError };
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'vendor', '.next', 'coverage', '__pycache__', '.venv', 'venv', 'target', 'out']);
+const BINARY_EXT = /\.(png|jpe?g|gif|webp|ico|bmp|tiff?|pdf|zip|gz|tgz|bz2|xz|7z|rar|tar|jar|war|class|exe|dll|so|dylib|o|a|bin|wasm|woff2?|ttf|otf|eot|mp3|mp4|m4a|mov|avi|mkv|wav|flac|ogg|webm|psd|sketch|fig|sqlite|db|pyc)$/i;
+
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      out[idx] = await fn(items[idx], idx);
+    }
+  }));
+  return out;
+}
+
+/**
+ * Reads the text files under `basePath` on `branch`. Skips binaries, dependency
+ * folders and oversized files, and caps the total so a large repo can't flood a room.
+ * Returns paths relative to `basePath`.
+ */
+async function listRepoFiles({ token, owner, repo, branch = 'main', basePath = '', fetchImpl, maxFiles = 150, maxFileBytes = 300 * 1024, maxTotalBytes = 3 * 1024 * 1024 }) {
+  const { request } = createClient({ token, fetchImpl });
+  let headSha;
+  try {
+    headSha = (await request('GET', `/repos/${owner}/${repo}/git/ref/heads/${encodePath(branch)}`)).object.sha;
+  } catch (err) {
+    if (err.status === 404 || err.status === 409) throw new GitHubError(`Branch "${branch}" not found (or the repository is empty)`, 404);
+    throw err;
+  }
+  const commit = await request('GET', `/repos/${owner}/${repo}/git/commits/${headSha}`);
+  const tree = await request('GET', `/repos/${owner}/${repo}/git/trees/${commit.tree.sha}?recursive=1`);
+
+  const prefix = basePath ? basePath.replace(/^\/+|\/+$/g, '') + '/' : '';
+  const skipped = { binary: 0, tooLarge: 0, ignoredDir: 0, overLimit: 0 };
+  const candidates = [];
+  let total = 0;
+
+  for (const entry of (tree.tree || []).filter(e => e.type === 'blob').sort((a, b) => a.path.localeCompare(b.path))) {
+    if (prefix && !entry.path.startsWith(prefix)) continue;
+    const rel = entry.path.slice(prefix.length);
+    if (rel.split('/').some(seg => SKIP_DIRS.has(seg))) { skipped.ignoredDir++; continue; }
+    if (BINARY_EXT.test(rel)) { skipped.binary++; continue; }
+    if ((entry.size || 0) > maxFileBytes) { skipped.tooLarge++; continue; }
+    if (candidates.length >= maxFiles || total + (entry.size || 0) > maxTotalBytes) { skipped.overLimit++; continue; }
+    total += entry.size || 0;
+    candidates.push({ path: entry.path, relPath: rel, sha: entry.sha });
+  }
+
+  const blobs = await mapLimit(candidates, 8, c => request('GET', `/repos/${owner}/${repo}/git/blobs/${c.sha}`));
+  const files = [];
+  candidates.forEach((c, i) => {
+    const buf = Buffer.from(blobs[i].content || '', blobs[i].encoding === 'base64' ? 'base64' : 'utf8');
+    if (buf.includes(0)) { skipped.binary++; return; } // binary without a telltale extension
+    files.push({ path: c.path, relPath: c.relPath, content: buf.toString('utf8') });
+  });
+
+  return { commitSha: headSha, files, skipped, truncated: Boolean(tree.truncated) };
+}
+
+module.exports = { parseRepo, buildRepoPath, testAccess, commitFiles, listRepoFiles, GitHubError };

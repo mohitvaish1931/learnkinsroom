@@ -1559,6 +1559,149 @@
             border-color: rgba(239, 68, 68, .3) !important;
         }
 
+        /* ── Touch devices: no hover, so keep message actions reachable ── */
+        @media (hover: none) {
+            .msg-actions { opacity: .75; }
+            .file-item button { opacity: .7 !important; }
+        }
+
+        /* ── Phones / small tablets ── */
+        #sidebar-backdrop { display: none; }
+
+        @media (max-width: 768px) {
+            #sidebar,
+            #sidebar.collapsed {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                width: min(300px, 84vw);
+                min-width: 0;
+                max-width: none;
+                z-index: 250;
+                transform: translateX(-100%);
+                transition: transform .25s ease;
+                overflow-y: auto;
+            }
+
+            #sidebar.mobile-open {
+                transform: none;
+                box-shadow: 0 0 40px rgba(0, 0, 0, .5);
+            }
+
+            #sidebar-backdrop.show {
+                display: block;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, .5);
+                z-index: 240;
+            }
+
+            #topbar { padding-left: 8px; padding-right: 8px; }
+            #topbar-room { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 34vw; }
+            #tabs-bar { overflow-x: auto; scrollbar-width: none; }
+
+            .resize-handle { display: none !important; }
+
+            /* One panel at a time, full width. */
+            #panels > .panel-wrap {
+                flex: 1 1 100% !important;
+                width: 100% !important;
+                max-width: none !important;
+                min-width: 0 !important;
+            }
+
+            #file-explorer { width: 112px !important; min-width: 0 !important; }
+            #code-toolbar #file-name { width: 96px !important; }
+            #code-toolbar .lang-select { display: none; }
+            #code-toolbar .icon-btn > span { display: none; }
+            #code-toolbar .icon-btn { width: 30px !important; padding: 0 !important; }
+
+            #pr-panel.open {
+                position: absolute;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: 100%;
+                z-index: 20;
+            }
+
+            /* 16px stops iOS from zooming into inputs. */
+            #chat-input, #ai-input, .input-field { font-size: 16px; }
+
+            .modal-box { padding: 20px; }
+            #run-output { height: 45%; }
+        }
+
+        /* ── Screen share stage ── */
+        #screen-stage {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            width: min(480px, calc(100vw - 32px));
+            background: var(--bg2);
+            border: 1px solid var(--border2);
+            border-radius: 14px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, .45);
+            z-index: 300;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #screen-stage.show { display: flex; }
+
+        #screen-stage.big {
+            inset: 64px 16px 16px auto;
+            width: min(1100px, calc(100vw - 32px));
+        }
+
+        #screen-stage .stage-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            font-size: 11px;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        #stage-videos {
+            flex: 1;
+            display: grid;
+            gap: 4px;
+            background: #000;
+            min-height: 0;
+        }
+
+        #stage-videos figure {
+            position: relative;
+            margin: 0;
+            min-height: 0;
+        }
+
+        #stage-videos video {
+            width: 100%;
+            height: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+            display: block;
+            background: #000;
+        }
+
+        #screen-stage.big #stage-videos video { max-height: none; }
+
+        #stage-videos figcaption {
+            position: absolute;
+            left: 8px;
+            bottom: 8px;
+            font-size: 10px;
+            color: #fff;
+            background: rgba(0, 0, 0, .6);
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
         /* ── System messages ── */
         .msg.system {
             justify-content: center;
@@ -1694,6 +1837,9 @@
         <div class="ctx-item danger" id="ctx-kick" onclick="ctxKick()" style="display:none;">
             <i class="fa-solid fa-user-xmark"></i> Remove from Room
         </div>
+        <div class="ctx-item danger" id="ctx-leave" onclick="ctxLeave()" style="display:none;">
+            <i class="fa-solid fa-door-open"></i> Leave Room
+        </div>
     </div>
 
     <!-- KICK CONFIRM MODAL -->
@@ -1800,6 +1946,14 @@
                     <i class="fa-solid fa-cloud-arrow-up mr-1"></i>Push all files now
                 </button>
             </div>
+            <div class="flex gap-2 mt-2 items-center">
+                <button class="btn-ghost-sm flex-1" onclick="window.importFromGithub()" id="btn-import-gh">
+                    <i class="fa-solid fa-cloud-arrow-down mr-1"></i>Import from GitHub
+                </button>
+                <label class="toggle-row" style="margin-top:0;flex:1;font-size:11px;">
+                    <input type="checkbox" id="set-import-overwrite" /> overwrite existing files
+                </label>
+            </div>
 
             <div class="flex gap-3 mt-5">
                 <button class="btn-ghost-sm flex-1" onclick="closeModal('settings-modal')">Cancel</button>
@@ -1828,6 +1982,7 @@
     </div>
 
     <!-- MAIN APP -->
+    <div id="sidebar-backdrop" onclick="window.toggleSidebar(false)"></div>
     <div id="app" style="display:none;">
 
         <!-- ══ SIDEBAR ══ -->
@@ -1880,6 +2035,10 @@
                     <button class="icon-btn voice-btn" id="voice-deafen-btn" onclick="window.toggleDeafen()"
                         title="Deafen" style="display:none;">
                         <i class="fa-solid fa-headphones"></i>
+                    </button>
+                    <button class="icon-btn voice-btn" id="voice-screen-btn" onclick="window.toggleScreenShare()"
+                        title="Share your screen" style="display:none;">
+                        <i class="fa-solid fa-display"></i>
                     </button>
                 </div>
                 <div id="voice-list" class="mt-2"></div>
@@ -1955,7 +2114,7 @@
                 </div>
                 <div class="tab-item" id="tab-code" onclick="window.focusPanel('code')" style="display:none;">
                     <i class="fa-solid fa-code" style="font-size:10px;"></i>
-                    <span id="tab-code-name">editor.js</span>
+                    <span id="tab-code-name">untitled.js</span>
                     <span class="tab-close" onclick="event.stopPropagation();window.togglePanel('code')">
                         <i class="fa-solid fa-xmark"></i>
                     </span>
@@ -2108,7 +2267,7 @@
                         <!-- Run output -->
                         <div id="run-output">
                             <div class="panel-header" style="height:32px;">
-                                <span class="panel-title" id="run-title">Output</span>
+                                <span class="panel-title" id="run-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;">Output</span>
                                 <div class="flex gap-1">
                                     <button class="icon-btn" onclick="window.clearRunOutput()" title="Clear">
                                         <i class="fa-solid fa-broom text-xs"></i>
@@ -2188,6 +2347,22 @@
             </div><!-- /panels -->
         </div><!-- /main -->
     </div><!-- /app -->
+
+    <!-- SCREEN SHARE STAGE -->
+    <div id="screen-stage" aria-live="polite">
+        <div class="stage-bar">
+            <span id="stage-title"><i class="fa-solid fa-display mr-1"></i>Screen</span>
+            <div class="flex gap-1">
+                <button class="icon-btn" onclick="window.toggleStageSize()" title="Expand / shrink">
+                    <i class="fa-solid fa-up-right-and-down-left-from-center text-xs"></i>
+                </button>
+                <button class="icon-btn" onclick="window.hideStage()" title="Hide">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+        </div>
+        <div id="stage-videos"></div>
+    </div>
 
     <!-- TOAST -->
     <div id="toast">
@@ -2372,7 +2547,7 @@
           <div class="code-snippet-header">
             <span><i class="fa-solid fa-code mr-1"></i>${safeLang}</span>
             <button onclick="navigator.clipboard.writeText(this.closest('.code-snippet').querySelector('pre code').textContent);window.showToast('Copied!','success')"
-              class="icon-btn" style="height:20px;padding:0 8px;font-size:10px;">
+              class="icon-btn" style="height:20px;width:auto;padding:0 8px;font-size:10px;white-space:nowrap;">
               <i class="fa-regular fa-copy mr-1"></i>Copy
             </button>
           </div>
@@ -2415,8 +2590,16 @@
         // ─────────────────────────────────────────────
         const panelState = { chat: true, code: false, ai: false };
 
+        const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+
         window.togglePanel = (name) => {
-            panelState[name] = !panelState[name];
+            if (isMobile()) {
+                // Phones show one panel at a time: the buttons switch between them.
+                const next = panelState[name] && name !== 'chat' ? 'chat' : name;
+                Object.keys(panelState).forEach(p => { panelState[p] = p === next; });
+            } else {
+                panelState[name] = !panelState[name];
+            }
             applyPanels();
             if (name === 'code' && currentUser) publishPresence();
         };
@@ -2465,10 +2648,24 @@
         //  SIDEBAR
         // ─────────────────────────────────────────────
         let sidebarOpen = true;
-        window.toggleSidebar = () => {
-            sidebarOpen = !sidebarOpen;
-            document.getElementById('sidebar').classList.toggle('collapsed', !sidebarOpen);
+        window.toggleSidebar = (force) => {
+            const sidebar = document.getElementById('sidebar');
+            if (isMobile()) {
+                const open = typeof force === 'boolean' ? force : !sidebar.classList.contains('mobile-open');
+                sidebar.classList.toggle('mobile-open', open);
+                document.getElementById('sidebar-backdrop').classList.toggle('show', open);
+                return;
+            }
+            sidebarOpen = typeof force === 'boolean' ? force : !sidebarOpen;
+            sidebar.classList.toggle('collapsed', !sidebarOpen);
         };
+
+        // Leaving phone width: drop the off-canvas state and show panels side by side again.
+        window.matchMedia('(max-width: 768px)').addEventListener('change', e => {
+            if (!e.matches) window.toggleSidebar(true);
+            document.getElementById('sidebar').classList.remove('mobile-open');
+            document.getElementById('sidebar-backdrop').classList.remove('show');
+        });
 
         // ─────────────────────────────────────────────
         //  RESIZE PANELS
@@ -2622,6 +2819,8 @@
             document.getElementById('ctx-role').style.display = isAdmin && !isSelf ? 'flex' : 'none';
             document.getElementById('ctx-divider').style.display = isAdmin && !isSelf ? 'block' : 'none';
             document.getElementById('ctx-kick').style.display = isAdmin && !isSelf ? 'flex' : 'none';
+            document.getElementById('ctx-leave').style.display = isSelf ? 'flex' : 'none';
+            document.getElementById('ctx-mention').style.display = isSelf ? 'none' : 'flex';
 
             menu.style.left = Math.min(e.clientX, innerWidth - 180) + 'px';
             menu.style.top = Math.min(e.clientY, innerHeight - 180) + 'px';
@@ -2638,6 +2837,15 @@
             const inp = document.getElementById('chat-input');
             inp.value += `@${(m.displayName || '').split(' ')[0]} `;
             inp.focus();
+        };
+
+        window.ctxLeave = async () => {
+            if (!confirm(`Leave "${currentRoom?.name}"? You can rejoin later with an invite code.`)) return;
+            try {
+                await api(`/api/rooms/${roomId}/members/${currentUser.uid}`, { method: 'DELETE' });
+                teardown();
+                window.location.href = '/lobby/';
+            } catch (err) { showToast(err.message, 'error'); }
         };
 
         window.ctxKick = () => {
@@ -2764,6 +2972,20 @@
                 document.getElementById('set-token').value = '';
                 const r = await api(`/api/rooms/${roomId}/github/push`, { method: 'POST', body: {} });
                 showToast(`Pushed to GitHub (${(r.sha || '').slice(0, 7)}).`, 'success');
+            } catch (err) { showToast(err.message, 'error'); }
+        });
+
+        window.importFromGithub = () => withBusy('btn-import-gh', async () => {
+            const overwrite = document.getElementById('set-import-overwrite').checked;
+            if (overwrite && !confirm('Replace room files that also exist in the repo? Open editors update live.')) return;
+            try {
+                await api(`/api/rooms/${roomId}`, { method: 'PATCH', body: settingsPayload() });
+                document.getElementById('set-token').value = '';
+                const r = await api(`/api/rooms/${roomId}/github/import`, { method: 'POST', body: { overwrite } });
+                const parts = [`${r.created} new`, `${r.updated} updated`];
+                if (r.skippedExisting) parts.push(`${r.skippedExisting} kept (tick overwrite to replace)`);
+                showToast(`Imported: ${parts.join(', ')}.`, 'success');
+                if (r.truncated) showToast('Repo is very large — GitHub returned a partial file list.', 'info');
             } catch (err) { showToast(err.message, 'error'); }
         });
 
@@ -2900,7 +3122,12 @@
     </div>`;
         }
 
+        // Raw message data by id — edit and reply need the original markdown,
+        // not the rendered HTML (code blocks render with extra UI text).
+        const messageCache = new Map();
+
         function appendMessage(msg) {
+            messageCache.set(msg.id, msg);
             const container = document.getElementById('messages');
             if (document.getElementById(`msg-${msg.id}`)) return;
             const div = document.createElement('div');
@@ -2911,6 +3138,7 @@
         }
 
         function updateMessageEl(id, data) {
+            messageCache.set(id, { id, ...data });
             const el = document.getElementById(`msg-${id}`);
             if (!el) return;
             const tmp = document.createElement('div');
@@ -3215,6 +3443,7 @@
         }
 
         function prependMessage(msg) {
+            messageCache.set(msg.id, msg);
             const container = document.getElementById('messages');
             if (document.getElementById(`msg-${msg.id}`)) return;
             const div = document.createElement('div');
@@ -3238,9 +3467,11 @@
         //  REPLY / EDIT / DELETE
         // ─────────────────────────────────────────────
         window.replyMsg = (id) => {
-            const txt = document.getElementById(`msg-text-${id}`)?.textContent?.trim() || '';
-            const name = document.querySelector(`#msg-${id} .msg-name`)?.textContent?.trim() || '';
-            replyTo = { id, uid: '', name, text: txt.slice(0, 200) };
+            const msg = messageCache.get(id) || {};
+            const txt = (msg.text || document.getElementById(`msg-text-${id}`)?.textContent || '').trim();
+            const name = members[msg.uid]?.displayName || msg.displayName ||
+                document.querySelector(`#msg-${id} .msg-name`)?.textContent?.trim() || '';
+            replyTo = { id, uid: msg.uid || '', name, text: txt.slice(0, 200) };
             document.getElementById('reply-name').textContent = name;
             document.getElementById('reply-preview').textContent = txt.slice(0, 40) + (txt.length > 40 ? '...' : '');
             document.getElementById('reply-bar').classList.add('show');
@@ -3256,7 +3487,7 @@
         window.editMsg = (id) => {
             const textEl = document.getElementById(`msg-text-${id}`);
             if (!textEl || document.getElementById(`edit-inp-${id}`)) return;
-            const cur = textEl.innerText || '';
+            const cur = messageCache.get(id)?.text ?? textEl.innerText ?? '';
             textEl.style.display = 'none';
             const editDiv = document.createElement('div');
             editDiv.className = 'edit-wrap';
@@ -3887,7 +4118,10 @@
 
             const muteBtn = document.getElementById('voice-mute-btn');
             const deafBtn = document.getElementById('voice-deafen-btn');
-            muteBtn.style.display = deafBtn.style.display = state.joined ? 'flex' : 'none';
+            const screenBtn = document.getElementById('voice-screen-btn');
+            muteBtn.style.display = deafBtn.style.display = screenBtn.style.display = state.joined ? 'flex' : 'none';
+            screenBtn.classList.toggle('active', Boolean(state.sharing));
+            screenBtn.title = state.sharing ? 'Stop sharing' : 'Share your screen';
             muteBtn.classList.toggle('danger-on', state.muted);
             muteBtn.querySelector('i').className = `fa-solid ${state.muted ? 'fa-microphone-slash' : 'fa-microphone'}`;
             deafBtn.classList.toggle('danger-on', state.deafened);
@@ -3900,10 +4134,59 @@
                   <div class="msg-avatar">${avatarInner(p.photo, p.name)}</div>
                   <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.name)}</span>
                   ${status}
+                  ${p.sharing ? '<i class="fa-solid fa-display" title="sharing screen" style="font-size:10px;color:#4ade80;"></i>' : ''}
                   ${p.muted ? '<i class="fa-solid fa-microphone-slash" style="font-size:10px;color:#f87171;"></i>' : ''}
                 </div>`;
             }).join('');
+            renderStage(state.joined ? fresh.filter(p => p.screen) : []);
         }
+
+        // Video elements are reused across renders so playback doesn't restart.
+        const stageVideos = new Map(); // uid -> figure
+        let stageHidden = false;
+        let stageCount = 0;
+        function renderStage(sharers) {
+            const box = document.getElementById('stage-videos');
+            const live = new Set(sharers.map(p => p.uid));
+            stageVideos.forEach((fig, uid) => { if (!live.has(uid)) { fig.remove(); stageVideos.delete(uid); } });
+            sharers.forEach(p => {
+                let fig = stageVideos.get(p.uid);
+                if (!fig) {
+                    fig = document.createElement('figure');
+                    const video = document.createElement('video');
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    video.muted = true;
+                    const cap = document.createElement('figcaption');
+                    fig.append(video, cap);
+                    box.appendChild(fig);
+                    stageVideos.set(p.uid, fig);
+                }
+                const video = fig.querySelector('video');
+                if (video.srcObject !== p.screen) { video.srcObject = p.screen; video.play().catch(() => { }); }
+                fig.querySelector('figcaption').textContent = p.uid === currentUser.uid ? 'You are sharing' : `${p.name}'s screen`;
+            });
+            box.style.gridTemplateColumns = sharers.length > 1 ? '1fr 1fr' : '1fr';
+            // A new share re-opens the stage even if it was hidden.
+            if (sharers.length > stageCount) stageHidden = false;
+            stageCount = sharers.length;
+            document.getElementById('stage-title').innerHTML =
+                `<i class="fa-solid fa-display mr-1"></i>${sharers.length ? esc(sharers.map(p => p.uid === currentUser.uid ? 'You' : p.name).join(', ')) : 'Screen'}`;
+            document.getElementById('screen-stage').classList.toggle('show', sharers.length > 0 && !stageHidden);
+        }
+
+        window.toggleStageSize = () => document.getElementById('screen-stage').classList.toggle('big');
+        window.hideStage = () => { stageHidden = true; document.getElementById('screen-stage').classList.remove('show'); };
+
+        window.toggleScreenShare = async () => {
+            if (!voice || !voiceState.joined) return;
+            try {
+                if (voiceState.sharing) voice.stopScreenShare();
+                else await voice.startScreenShare();
+            } catch (err) {
+                if (err.name !== 'NotAllowedError') showToast('Screen share failed: ' + err.message, 'error');
+            }
+        };
 
         window.toggleVoice = async () => {
             if (!voice) return;

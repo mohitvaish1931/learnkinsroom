@@ -38,6 +38,7 @@ export class VoiceRoom {
     this.participants = new Map(); // uid -> participant doc
     this.peers = new Map();        // uid -> peer state
     this.speaking = new Set();
+    this.screenStream = null;      // our own screen share, if any
     this.unsubs = [];
     this.heartbeat = null;
     this.audioCtx = null;
@@ -52,9 +53,10 @@ export class VoiceRoom {
       .map(p => ({
         ...p,
         speaking: this.speaking.has(p.uid),
+        screen: p.uid === this.user.uid ? this.screenStream : (p.sharing ? this.peers.get(p.uid)?.screen || null : null),
         connection: p.uid === this.user.uid ? 'self' : (this.peers.get(p.uid)?.pc.connectionState || 'new')
       }));
-    return { joined: this.joined, muted: this.muted, deafened: this.deafened, participants: list };
+    return { joined: this.joined, muted: this.muted, deafened: this.deafened, sharing: Boolean(this.screenStream), participants: list };
   }
 
   emit() { try { this.onChange(this.state); } catch { } }
@@ -99,6 +101,7 @@ export class VoiceRoom {
       photo: this.user.photo || '',
       session: this.session,
       muted: false,
+      sharing: false,
       joinedAt: serverTimestamp(),
       heartbeat: serverTimestamp()
     });
@@ -136,6 +139,7 @@ export class VoiceRoom {
   async leave() {
     if (!this.joined) return;
     this.joined = false;
+    this.stopScreenShare({ silent: true });
     clearInterval(this.heartbeat);
     this.unsubs.forEach(u => u());
     this.unsubs = [];
@@ -169,6 +173,39 @@ export class VoiceRoom {
     this.emit();
   }
 
+  // ── screen sharing ────────────────────────────
+  // The screen is an extra video track on the existing connections; adding or
+  // removing it triggers renegotiation through the same perfect-negotiation path.
+  async startScreenShare() {
+    if (!this.joined || this.screenStream) return;
+    if (!navigator.mediaDevices?.getDisplayMedia) throw new Error('Screen sharing is not supported in this browser');
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 15 }, audio: false });
+    const track = stream.getVideoTracks()[0];
+    // The picker is async: the user may have left the call (or started another share) meanwhile.
+    if (!track || !this.joined || this.screenStream) { stream.getTracks().forEach(t => t.stop()); return; }
+    track.contentHint = 'detail'; // favour sharp text (code) over smooth motion
+    track.onended = () => this.stopScreenShare(); // browser's own "Stop sharing" button
+    this.screenStream = stream;
+    this.peers.forEach(peer => { peer.screenSender = peer.pc.addTrack(track, stream); });
+    updateDoc(doc(this.voiceCol, this.user.uid), { sharing: true }).catch(() => { });
+    this.emit();
+  }
+
+  stopScreenShare({ silent = false } = {}) {
+    if (!this.screenStream) return;
+    const stream = this.screenStream;
+    this.screenStream = null;
+    this.peers.forEach(peer => {
+      if (peer.screenSender && peer.pc.signalingState !== 'closed') {
+        try { peer.pc.removeTrack(peer.screenSender); } catch { }
+      }
+      peer.screenSender = null;
+    });
+    stream.getTracks().forEach(t => t.stop());
+    if (!silent) updateDoc(doc(this.voiceCol, this.user.uid), { sharing: false }).catch(() => { });
+    this.emit();
+  }
+
   // Opens connections to fresh participants and drops ones that left or rejoined.
   reconcilePeers() {
     if (!this.joined) return;
@@ -196,6 +233,8 @@ export class VoiceRoom {
       makingOffer: false,
       ignoreOffer: false,
       pendingCandidates: [],
+      screen: null,
+      screenSender: null,
       outCandidates: [],
       candidateTimer: null,
       seq: 0
@@ -203,8 +242,19 @@ export class VoiceRoom {
     this.peers.set(uid, peer);
 
     this.localStream.getTracks().forEach(track => pc.addTrack(track, this.localStream));
+    const screenTrack = this.screenStream?.getVideoTracks()[0];
+    if (screenTrack) peer.screenSender = pc.addTrack(screenTrack, this.screenStream);
 
-    pc.ontrack = ({ streams }) => {
+    pc.ontrack = ({ track, streams }) => {
+      if (track.kind === 'video') {
+        const stream = streams[0] || new MediaStream([track]);
+        peer.screen = stream;
+        const clear = () => { if (peer.screen === stream) { peer.screen = null; this.emit(); } };
+        stream.onremovetrack = clear;
+        track.onended = clear;
+        this.emit();
+        return;
+      }
       const stream = streams[0];
       if (!stream || audio.srcObject === stream) return;
       audio.srcObject = stream;
